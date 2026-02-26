@@ -93,6 +93,9 @@ public class PersonalOrderService {
 					}
 				}
 
+				if (paymentStatus == PaymentStatus.CONFIRMED) {
+					ordersDao.updateStatusByEventAndUser(req.getEventsId(), req.getUserId());
+				}
 				order.setPaymentStatus(paymentStatus);
 			}
 
@@ -140,6 +143,9 @@ public class PersonalOrderService {
 			// 狀態更新為已確認
 			order.setPaymentStatus(PaymentStatus.CONFIRMED);
 			order.setPaymentTime(LocalDateTime.now());
+
+			// 更新 orders 表裡的狀態
+			ordersDao.updateStatusByEventAndUser(eventsId, userId);
 
 			personalOrderDao.save(order);
 			return new PersonalOrdersRes(200, "訂單確認成功");
@@ -220,7 +226,6 @@ public class PersonalOrderService {
 					User user = userDao.getUserById(po.getUserId());
 					if (user != null) {
 						po.setUserNickname(user.getNickname());
-						po.setUserAvatar(user.getAvatarUrl());
 					}
 
 					// 取餐狀態 (從 orders 表抓取該用戶的狀態)
