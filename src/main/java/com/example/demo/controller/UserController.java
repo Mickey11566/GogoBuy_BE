@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import com.example.demo.request.UserAddReq;
 import com.example.demo.request.UserLoginReq;
 import com.example.demo.response.BasicRes;
 import com.example.demo.response.GetUserInfoListRes;
+import com.example.demo.response.LoginRes;
 import com.example.demo.service.GoogleOAuth2Service;
 import com.example.demo.service.UserService;
 
@@ -60,8 +62,13 @@ public class UserController {
 	@PostMapping("gogobuy/user/login")
 	public BasicRes login(@Valid @RequestBody UserLoginReq req, HttpSession session) throws Exception {
 		BasicRes res = userService.login(req);
-		if (res.getCode() == 200) {
-//			setting session's attribute when login success
+
+		if (res.getCode() == 200 && res instanceof LoginRes) {
+			LoginRes loginRes = (LoginRes) res;
+			// 存入 UUID (給攔截器檢查狀態用)
+			session.setAttribute("currentUserId", loginRes.getId());
+
+			// setting session's attribute when login success
 			session.setAttribute("account", req.getEmail());
 		}
 		return res;
@@ -117,9 +124,9 @@ public class UserController {
 	 */
 	@PostMapping("gogobuy/user/logout")
 	public BasicRes logout(HttpSession session) {
-//		讓session 失效
-//		一個 session 的有效時間為 30 分
-//		在有效時間內做任何操作，都會再延長30分
+		// 讓session 失效
+		// 一個 session 的有效時間為 30 分
+		// 在有效時間內做任何操作，都會再延長30分
 		session.invalidate();
 		return new BasicRes(ResMessage.SUCCESS.getCode(), //
 				ResMessage.SUCCESS.getMessage());
@@ -152,4 +159,69 @@ public class UserController {
 		return userService.sendOtpByEmail(email);
 	}
 
+	/*
+	 * 點擊認證驗證信
+	 */
+	@GetMapping("gogobuy/user/active-account")
+	public BasicRes activeAccount(@RequestParam("token") String token) {
+		// 調用 service 檢查 JWT 並更新狀態
+		boolean success = userService.activateUser(token);
+
+		if (success) {
+			return new BasicRes(ResMessage.SUCCESS.getCode(), "帳號開通成功");
+		} else {
+			return new BasicRes(ResMessage.VERIFICATION_ERROR.getCode(), ResMessage.VERIFICATION_ERROR.getMessage());
+		}
+	}
+
+	/*
+	 * 重新發送開通驗證信
+	 */
+	@GetMapping("gogobuy/user/resend-active-account")
+	public BasicRes resendActiveAccount(@RequestParam("email") String email) {
+		return userService.resendActivationEmail(email);
+	}
+
+	/*
+	 * 用戶點擊「停用帳戶」
+	 */
+	@PostMapping("gogobuy/user/suspend")
+	public BasicRes suspend(@RequestParam("id") String userId) {
+		return userService.selfSuspend(userId);
+
+	}
+
+	/*
+	 * 停權用戶 API
+	 */
+	@PostMapping("gogobuy/ban-user")
+	public BasicRes banUser(@RequestParam("id") String id) {
+		return userService.adminBan(id);
+
+	}
+
+	/*
+	 * 恢復用戶帳號 API
+	 */
+	@PostMapping("gogobuy/active-user")
+	public BasicRes activeUser(@RequestParam("id") String id) {
+		return userService.activeUserAdmin(id);
+	}
+	
+	/*
+	 * 更新最愛店家
+	 *(傳最終結果陣列就好 不論是新增修改刪除)
+	 */
+	@PostMapping("gogobuy/updateFavoriteStore")
+	public BasicRes updateFavoriteStore(@RequestParam("id") String id,@RequestParam(value = "storesList",required = false) List<Integer> storesList) {
+		return userService.updateFavoriteStores(id, storesList);
+	}
+	
+//	/*
+//	 *查詢最愛店家 
+//	 */
+//	@GetMapping("gogobuy/getFavoriteStore")
+//	public FavoriteRes getFavoriteStore(@RequestParam("id") String id) {
+//	return userService.getFavoriteStores(id);
+//	}
 }

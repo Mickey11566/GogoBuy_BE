@@ -27,7 +27,7 @@ public class GroupbuyEventsSchedule {
 	
     // "0 * * * * *" 代表「每分鐘的第一秒」執行一次
 
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void autoUpdateEventsStatus() {
     	

@@ -50,6 +50,17 @@ public class User {
 	@Column(name = "provider")
 	private String provider;
 
+	@Column(name = "status")
+	private String status;
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
 	public String getProvider() {
 		return provider;
 	}

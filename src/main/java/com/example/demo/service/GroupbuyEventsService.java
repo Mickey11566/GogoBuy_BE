@@ -28,10 +28,12 @@ import com.example.demo.entity.GroupsSearchView;
 import com.example.demo.entity.Menu;
 import com.example.demo.entity.Orders;
 import com.example.demo.entity.OrdersSearchView;
+import com.example.demo.entity.PersonalOrder;
 import com.example.demo.entity.Stores;
 import com.example.demo.entity.User;
 import com.example.demo.projection.GroupbuyEventsProjection;
 import com.example.demo.request.GroupbuyEventsReq;
+import com.example.demo.request.personalOrderReq;
 import com.example.demo.response.BasicRes;
 import com.example.demo.response.GroupbuyEventsRes;
 import com.example.demo.response.GroupbuyEventsResNew;
@@ -52,13 +54,13 @@ public class GroupbuyEventsService {
 	private GroupbuyEventsDao groupbuyEventsDao;
 
 	@Autowired
+	private PersonalOrderDao personalOrderDao;
+
+	@Autowired
 	private GroupsSearchViewDao groupsSearchViewDao;
 
 	@Autowired
 	private OrdersDao ordersDao;
-
-	@Autowired
-	private PersonalOrderDao personalOrderDao;
 
 	@Autowired
 	private PersonalOrderService personalOrderService;
@@ -75,7 +77,8 @@ public class GroupbuyEventsService {
 		// 檢查有沒有團長
 		User user = userDao.findById(req.getHostId()).orElse(null);
 		if (user == null) {
-			return new GroupbuyEventsResNew(ResMessage.HOST_ID_NOT_FOUND.getCode(), ResMessage.HOST_ID_NOT_FOUND.getMessage());
+			return new GroupbuyEventsResNew(ResMessage.HOST_ID_NOT_FOUND.getCode(),
+					ResMessage.HOST_ID_NOT_FOUND.getMessage());
 		}
 
 		// 檢查商店ID
@@ -124,21 +127,30 @@ public class GroupbuyEventsService {
 			return new GroupbuyEventsResNew(ResMessage.SPLIT_TYPE_ERROR.getCode(), //
 					ResMessage.SPLIT_TYPE_ERROR.getMessage());
 		}
+		if (req.getPickupTime() == null) {
+			return new GroupbuyEventsResNew(400, //
+					"取貨時間為空喵!");
+		}
+
+		if (req.getPickupTime().isBefore(req.getEndTime())) {
+			return new GroupbuyEventsResNew(400, //
+					"取貨時間早於結單時間喵!");
+		}
 		return new GroupbuyEventsResNew(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage());
 	}
 
 	// 新增開團
 	public GroupbuyEventsResNew addEvent(GroupbuyEventsReq req) {
-//		 如果 checkEvent(req).getCode() 不等於 SUCCESS.getCode() 就會回傳 錯誤的訊息跟代碼
+		// 如果 checkEvent(req).getCode() 不等於 SUCCESS.getCode() 就會回傳 錯誤的訊息跟代碼
 		if (checkEvent(req).getCode() != ResMessage.SUCCESS.getCode()) {
 			return checkEvent(req);
 		}
 		int check = groupbuyEventsDao.checkEvnet(req.getHostId(), req.getStoresId());
-		if(check > 0) {
+		if (check > 0) {
 			return new GroupbuyEventsResNew(400, "您已在此店家發起過團購，請勿重複新增");
 		}
 		/*
-		 *  新增資料
+		 * 新增資料
 		 */
 		GroupbuyEvents event = new GroupbuyEvents();
 		event.setHostId(req.getHostId());
@@ -153,6 +165,8 @@ public class GroupbuyEventsService {
 		event.setAnnouncement(req.getAnnouncement());
 		event.setType(req.getType());
 		event.setRecommendDescription(req.getRecommendDescription());
+		event.setPickupTime(req.getPickupTime());
+		event.setPickLocation(req.getPickLocation());
 
 		try {
 			// 此店家的全部菜單
@@ -174,7 +188,7 @@ public class GroupbuyEventsService {
 			if (req.getTempMenuList() != null) {
 				for (Integer selectedId : req.getTempMenuList()) {
 					// 檢查這個 ID 是否有在商店裡
-					
+
 					/*
 					 * .contains(selectedId) (快速比對)：這是 Set 的功能。 會瞬間檢查 selectedId（團長給的菜單的商品 ID）有沒有在
 					 * MenuIds 商店菜單裡面。
@@ -211,7 +225,7 @@ public class GroupbuyEventsService {
 			event.setTempMenuList(tempMenuJson);
 			event.setRecommendList(recommendJson);
 			groupbuyEventsDao.save(event);
-			
+
 		} catch (Exception e) {
 			return new GroupbuyEventsResNew(ResMessage.EVENT_ERROR.getCode(), ResMessage.EVENT_ERROR.getMessage());
 		}
@@ -288,7 +302,7 @@ public class GroupbuyEventsService {
 					tempMenuJson, //
 					recommendJson, //
 					req.getRecommendDescription(), //
-					req.getLimitation(), id);
+					req.getLimitation(), req.getPickLocation(), req.getPickupTime(), id);
 		} catch (Exception e) {
 			return new BasicRes(ResMessage.EVENT_ERROR.getCode(), ResMessage.EVENT_ERROR.getMessage());
 		}
@@ -297,7 +311,7 @@ public class GroupbuyEventsService {
 
 	// 團長手動結單
 	@Transactional
-	public BasicRes HostCloseEvent(int id, String hostId) {
+	public BasicRes hostCloseEvent(int id, String hostId) {
 		GroupbuyEvents event = groupbuyEventsDao.findById(id);
 		if (event == null) {
 			return new BasicRes(404, "找不到該團購活動");
@@ -320,14 +334,15 @@ public class GroupbuyEventsService {
 		List<String> userIdList = ordersDao.getUserIdByEventsId(id);
 		if (!CollectionUtils.isEmpty(userIdList)) {
 			for (String userIdStr : userIdList) {
-				// 計算該用戶個人的數據
-				// 此用戶的全部小計
-				int userSubtotal = ordersDao.sumSubtotalByEventIdAndUserId(id, userIdStr);
-				// 此用戶的全部重量
-				Double userWeight = ordersDao.sumWeightByEventIdAndUserId(id, userIdStr);
+				// 準備 Request 物件
+				personalOrderReq req = new personalOrderReq();
+				req.setEventsId(id);
+				req.setUserId(userIdStr);
+				req.setTotalSum(ordersDao.sumSubtotalByEventIdAndUserId(id, userIdStr));
+				req.setTotalWeight(ordersDao.sumWeightByEventIdAndUserId(id, userIdStr));
+				req.setPersonFee(0);
 				// 新增
-				personalOrderDao.addPersonalOrder(id, userIdStr, userWeight, 0, userSubtotal,
-						PaymentStatus.UNPAID.name());
+				personalOrderService.addPersonalOrder(req);
 			}
 		}
 		// 手動結單完查詢所屬活動的跟團者做自動生產addPersonOrder資料
@@ -351,25 +366,6 @@ public class GroupbuyEventsService {
 	public BasicRes autoCloseEvent(int id, String userId) {
 		BasicRes autoClose = closeEvent(id, userId);
 		return autoClose;
-	}
-
-	// 軟刪除
-	@Transactional
-	public BasicRes deleteEvent(int eventsId) {
-		// 檢查該活動是否存在且尚未被刪除
-		GroupbuyEvents event = groupbuyEventsDao.findById(eventsId);
-		if (event == null) {
-			return new BasicRes(404, "找不到該團購活動或活動已被刪除");
-		}
-		// 軟刪除主表
-		int deletedEvent = groupbuyEventsDao.delete(eventsId);
-
-		if (deletedEvent > 0) {
-			// 順便刪除子表
-			ordersDao.deleteAllOrdersByEventId(eventsId);
-			return new BasicRes(200, "團購活動ID: " + eventsId + "已成功刪除");
-		}
-		return new BasicRes(500, "刪除活動失敗，請稍後再試");
 	}
 
 	// 回傳開團者的開團紀錄
@@ -466,13 +462,13 @@ public class GroupbuyEventsService {
 			res.setGroupsSearchViewList(nicknameEventsList);
 			return res;
 		} catch (Exception e) {
-			return new GroupbuyEventsRes(500, "這裡失敗?");
+			return new GroupbuyEventsRes(500, "查詢失敗");
 		}
 	}
 
 	// 回傳eventsId的活動
 	public GroupbuyEventsRes getEventsByEventsId(int id) {
-		List<GroupbuyEventsProjection> list = groupbuyEventsDao.getEventsByEventsId(id);
+		List<GroupsSearchView> list = groupbuyEventsDao.getEventsByEventsId(id);
 		if (CollectionUtils.isEmpty(list)) {
 			return new GroupbuyEventsRes(404, "查無此資料");
 		}
@@ -484,7 +480,7 @@ public class GroupbuyEventsService {
 	public BasicRes deleteEventPhysically(int eventId) {
 		GroupbuyEvents event = groupbuyEventsDao.findById(eventId);
 		if (event == null) {
-			return new BasicRes(404, "根本沒有這團喵");
+			return new BasicRes(404, "找不到該筆資料");
 		}
 
 		groupbuyEventsDao.deleteEvent(eventId);
@@ -492,101 +488,154 @@ public class GroupbuyEventsService {
 		return new BasicRes(200, "成功刪除團購喵");
 	}
 
+	// 物理刪除
+	@Transactional
+	public BasicRes delete(int eventsId) {
+		// 檢查該活動是否存在且尚未被刪除
+		GroupbuyEvents event = groupbuyEventsDao.findById(eventsId);
+		if (event == null) {
+			return new BasicRes(404, "找不到該團購活動或活動已被刪除");
+		}
+		// 軟刪除主表
+		int deletedEvent = groupbuyEventsDao.delete(eventsId);
+		if (deletedEvent > 0) {
+			// 順便刪除子表
+			ordersDao.deleteAllOrdersByEventId(eventsId);
+			return new BasicRes(200, "團購活動ID: " + eventsId + "已成功刪除");
+		}
+		return new BasicRes(500, "刪除活動失敗，請稍後再試");
+	}
+
 	// 給團長看全部的orders
-    public GroupbuyEventsRes getOrdersAll(int eventId) {
-        List<OrdersSearchView> ordersSearchViewList = groupbuyEventsDao.selectOrdersAll(eventId);
+	public GroupbuyEventsRes getOrdersAll(int eventId) {
+		List<OrdersSearchView> ordersSearchViewList = groupbuyEventsDao.selectOrdersAll(eventId);
 
-        if(ordersSearchViewList == null) {
-            return new GroupbuyEventsRes(404, "查無此orders");
-        }
-        ObjectMapper mapper = new ObjectMapper();
-        // 多筆所以要用迴圈 一筆一筆轉
-        for (OrdersSearchView order : ordersSearchViewList) {
-            try {
-                String selectedOptionJson = order.getSelectedOption(); 
-                if (!CollectionUtils.isEmpty(ordersSearchViewList)) {
-                    List<Map<String, Object>> list = mapper.readValue(selectedOptionJson, new TypeReference<>() {});
-                    order.setSelectedOptionList(list);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return new GroupbuyEventsRes(200, "成功", null, null, null, null, null, ordersSearchViewList);
-    }
+		if (ordersSearchViewList == null) {
+			return new GroupbuyEventsRes(404, "查無此orders");
+		}
+		ObjectMapper mapper = new ObjectMapper();
+		// 多筆所以要用迴圈 一筆一筆轉
+		for (OrdersSearchView order : ordersSearchViewList) {
+			try {
+				String selectedOptionJson = order.getSelectedOption();
+				if (!CollectionUtils.isEmpty(ordersSearchViewList)) {
+					List<Map<String, Object>> list = mapper.readValue(selectedOptionJson, new TypeReference<>() {
+					});
+					order.setSelectedOptionList(list);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return new GroupbuyEventsRes(200, "成功", null, null, null, null, null, ordersSearchViewList);
+	}
 
-	
 	// 購物車(首頁)
 	public GroupbuyEventsRes getCart(String userId) {
-	    try {
-	        if (!StringUtils.hasText(userId)) {
-	            return new GroupbuyEventsRes(400, "UserId空的喵");
-	        }
-	        
-	        List<GroupsSearchView> relatedViews = groupsSearchViewDao.findAllMyRelatedEvents(userId);
+		try {
+			if (!StringUtils.hasText(userId)) {
+				return new GroupbuyEventsRes(400, "找不到該用戶");
+			}
 
-	        if (CollectionUtils.isEmpty(relatedViews)) {
-	            return new GroupbuyEventsRes(200, "購物車目前沒有資料喵");
-	        }
+			List<GroupsSearchView> relatedViews = groupsSearchViewDao.findAllMyRelatedEvents(userId);
 
-	        List<Orders> allVisibleOrders = new ArrayList<>();
-	        Map<Integer, CartDTO> cartMap = new HashMap<>();
+			if (CollectionUtils.isEmpty(relatedViews)) {
+				return new GroupbuyEventsRes(400, "");
+			}
 
-	        for (GroupsSearchView view : relatedViews) {
-	            int eid = view.getEventId();
-	            boolean isHost = userId.equals(view.getHostId());
+			List<Orders> allVisibleOrders = new ArrayList<>();
+			Map<Integer, CartDTO> cartMap = new HashMap<>();
+			Set<Integer> hostEventIds = new java.util.HashSet<>();
 
-	            //我是團長就拿「整團單」，我是團員就拿「個人單」
-	            if (isHost) {
-	                // 團長拿整團 (getAllOrdersByEventId)
-	                List<Orders> hostOrders = ordersDao.getAllOrdersByEventId(eid);
-	                if (!CollectionUtils.isEmpty(hostOrders)) allVisibleOrders.addAll(hostOrders);
-	            } else {
-	                // 團員拿自己 (getEventIdByUserId)
-	                List<Orders> memberOrders = ordersDao.getEventIdByUserId(userId, eid);
-	                if (!CollectionUtils.isEmpty(memberOrders)) allVisibleOrders.addAll(memberOrders);
-	            }
+			for (GroupsSearchView view : relatedViews) {
+				int eid = view.getEventId();
+				boolean isHost = userId.equals(view.getHostId());
+				if (isHost) {
+					hostEventIds.add(eid);
+				}
 
-	            // 預先初始化 CartDTO(View)
-	            CartDTO dto = new CartDTO();
-	            dto.setEventsId(eid);
-	            dto.setEventName(view.getEventName());
-	            dto.setStoreName(view.getStoreName());
-	            dto.setStoreLogo(view.getStoreImage()); 
-	            dto.setHostLogo(view.getHostAvatar());
-	            dto.setStatus(view.getEventStatus());
-	            
-	            // 權限：團長只要沒結單都能改；團員只有 OPEN 能改
-	            boolean canModify = isHost ? !"FINISHED".equals(view.getEventStatus().toString()) 
-	                                       : "OPEN".equals(view.getEventStatus().toString());
-	            dto.setCanModify(canModify);
-	            dto.setItems(new ArrayList<>());
-	            cartMap.put(eid, dto);
-	        }
+				// 如果整體活動已結束，且我不是團長，就不顯示在「跟團中」 (團員部分：活動結案即移除)
+				if (view.getEventStatus() == GroupbuyStatusEnum.FINISHED && !isHost) {
+					continue;
+				}
 
-	        // 將蒐集到的訂單塞入對應的 DTO 裡
-	        for (Orders order : allVisibleOrders) {
-	            CartDTO current = cartMap.get(order.getEventsId());
-	            if (current != null) {
-	                current.getItems().add(order);
-	                current.setTotalAmount(current.getTotalAmount() + order.getSubtotal());
-	                current.setTotalQuantity(current.getItems().size());
-	                
-	                // 時間紀錄
-	                if (current.getLatestOrderTime() == null || 
-	                    order.getOrderTime().toString().compareTo(current.getLatestOrderTime()) > 0) {
-	                    current.setLatestOrderTime(order.getOrderTime().toString());
-	                }
-	            }
-	        }
+				// 檢查身分與處理狀態
+				PersonalOrder po = personalOrderDao.findByEventsIdAndUserId(eid, userId);
 
-	        GroupbuyEventsRes res = new GroupbuyEventsRes(200, "成功找到");
-	        res.setCartData(new ArrayList<>(cartMap.values()));
-	        return res;
+				// 團員部分：如果已經點擊過「確認結算」，代表對該團員來說流程已結束
+				if (!isHost && po != null && po.getPaymentStatus() == PaymentStatus.CONFIRMED) {
+					continue;
+				}
 
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return new GroupbuyEventsRes(500, "查詢失敗");
-	    }
+				// 我是團長就拿「整團單」，我是團員就拿「個人單」
+				if (isHost) {
+					// 團長拿整團 (拿該活動所有品項以同步統計資訊)
+					List<Orders> hostOrders = ordersDao.getUserAllByEventsId(eid);
+					if (!CollectionUtils.isEmpty(hostOrders)) {
+						allVisibleOrders.addAll(hostOrders);
+					}
+				} else {
+					// 團員拿自己 (getEventIdByUserId)
+					List<Orders> memberOrders = ordersDao.getOrderByEventIdAndUserId(userId, eid);
+					if (!CollectionUtils.isEmpty(memberOrders))
+						allVisibleOrders.addAll(memberOrders);
+				}
+
+				// 預先初始化 CartDTO(View)
+				CartDTO dto = new CartDTO();
+				dto.setEventsId(eid);
+				dto.setEventName(view.getEventName());
+				dto.setStoreName(view.getStoreName());
+				dto.setStoreLogo(view.getStoreImage());
+				dto.setHostLogo(view.getHostAvatar());
+				// 團長部分：計算未完成的統計數據
+				if (isHost) {
+					dto.setUnpaidCount(personalOrderDao.countUnpaidByEventsId(eid));
+					dto.setUnpickedCount(ordersDao.countUnpickedByEventId(eid));
+					// 修正：主揪直接拿全團總額，避免因為狀態切換導致總額跳動
+					dto.setTotalAmount(ordersDao.sumSubtotalByEventId(eid));
+				}
+				dto.setStatus(view.getEventStatus());
+				dto.setPickLocation(view.getPickLocation());
+				dto.setPickupTime(view.getPickupTime() != null ? view.getPickupTime().toString() : "尚未設定");
+
+				// 權限：團長只要沒結單都能改；團員只有 OPEN 能改
+				boolean canModify = isHost ? !"FINISHED".equals(view.getEventStatus().toString())
+						: "OPEN".equals(view.getEventStatus().toString());
+				dto.setCanModify(canModify);
+				dto.setItems(new ArrayList<>());
+				cartMap.put(eid, dto);
+			}
+
+			// 將蒐集到的訂單塞入對應的 DTO 裡
+			for (Orders order : allVisibleOrders) {
+				CartDTO current = cartMap.get(order.getEventsId());
+				if (current != null) {
+					current.getItems().add(order);
+					// 只有團員單才需要在此累加；團長單在構造 DTO 時已經拿過總額了
+					if (!hostEventIds.contains(order.getEventsId())) {
+						current.setTotalAmount(current.getTotalAmount() + order.getSubtotal());
+					}
+					current.setTotalQuantity(current.getItems().size());
+
+					// 時間紀錄
+					if (order.getOrderTime() != null) {
+						String orderTimeStr = order.getOrderTime().toString();
+						if (current.getLatestOrderTime() == null
+								|| orderTimeStr.compareTo(current.getLatestOrderTime()) > 0) {
+							current.setLatestOrderTime(orderTimeStr);
+						}
+					}
+				}
+			}
+
+			GroupbuyEventsRes res = new GroupbuyEventsRes(200, "成功找到");
+			res.setCartData(new ArrayList<>(cartMap.values()));
+			return res;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new GroupbuyEventsRes(500, "查詢失敗");
+		}
 	}
 }

@@ -62,9 +62,7 @@ public interface WishDao extends JpaRepository<Wishes, Integer>, WishRepository 
 	@Transactional
 	@Query(value = "update wishes set is_finished = true where id = ?1", nativeQuery = true)
 	public int finishWish(int id);
-	// 查開團id
-	@Query(value = "select id from groupbuy_events where host_id = ? order by id DESC limit 1", nativeQuery = true)
-	public int getEventId(String userId);
+	// 查開團id(前端回傳)
 	
 //	個人願望刪除
 	@Modifying

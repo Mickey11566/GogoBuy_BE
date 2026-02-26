@@ -1,8 +1,14 @@
 package com.example.demo.response;
 
 import java.util.List;
+import java.util.Map;
+
 import com.example.demo.entity.Stores;
-import com.example.demo.vo.*;
+import com.example.demo.vo.FeeDescriptionVo;
+import com.example.demo.vo.MenuCategoriesVo;
+import com.example.demo.vo.MenuVo;
+import com.example.demo.vo.ProductOptionGroupsVo;
+import com.example.demo.vo.StoreOperatingHoursVo;
 
 public class StoresRes extends BasicRes {
 
@@ -11,6 +17,9 @@ public class StoresRes extends BasicRes {
 
 	// 新功能專用 (用於附近店家的 Projection)
 	private List<?> data;
+	
+	//營業中篩選用	
+	private List<Map<String, Object>> storeOperatingList;
 
 	private List<StoreOperatingHoursVo> operatingHoursVoList;
 	private List<MenuVo> menuVoList;
@@ -109,4 +118,14 @@ public class StoresRes extends BasicRes {
 	public void setFeeDescriptionVoList(List<FeeDescriptionVo> list) {
 		this.feeDescriptionVoList = list;
 	}
+
+	public List<Map<String, Object>> getStoreOperatingList() {
+		return storeOperatingList;
+	}
+
+	public void setStoreOperatingList(List<Map<String, Object>> storeOperatingList) {
+		this.storeOperatingList = storeOperatingList;
+	}
+	
+	
 }

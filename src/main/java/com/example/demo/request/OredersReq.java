@@ -33,6 +33,14 @@ public class OredersReq {
 	private double weight;
 
 	private boolean deleted;
+	
+	private String menuName;
+	
+	private int basePrice;
+	
+	private int specPrice;
+	
+	private int quantity;
 
 	public int getId() {
 		return id;
@@ -120,6 +128,38 @@ public class OredersReq {
 
 	public void setDeleted(boolean deleted) {
 		this.deleted = deleted;
+	}
+
+	public String getMenuName() {
+		return menuName;
+	}
+
+	public void setMenuName(String menuName) {
+		this.menuName = menuName;
+	}
+
+	public int getBasePrice() {
+		return basePrice;
+	}
+
+	public void setBasePrice(int basePrice) {
+		this.basePrice = basePrice;
+	}
+
+	public int getSpecPrice() {
+		return specPrice;
+	}
+
+	public void setSpecPrice(int specPrice) {
+		this.specPrice = specPrice;
+	}
+
+	public int getQuantity() {
+		return quantity;
+	}
+
+	public void setQuantity(int quantity) {
+		this.quantity = quantity;
 	}
 	
 	

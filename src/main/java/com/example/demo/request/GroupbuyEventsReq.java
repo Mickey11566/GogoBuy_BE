@@ -52,6 +52,10 @@ public class GroupbuyEventsReq {
     private int limitation = 0;
 
     private boolean deleted;
+    
+    private LocalDateTime pickupTime;
+    
+    private String pickLocation;
 
 	public int getId() {
 		return id;
@@ -179,6 +183,22 @@ public class GroupbuyEventsReq {
 
 	public void setDeleted(boolean deleted) {
 		this.deleted = deleted;
+	}
+
+	public LocalDateTime getPickupTime() {
+		return pickupTime;
+	}
+
+	public void setPickupTime(LocalDateTime pickupTime) {
+		this.pickupTime = pickupTime;
+	}
+
+	public String getPickLocation() {
+		return pickLocation;
+	}
+
+	public void setPickLocation(String pickLocation) {
+		this.pickLocation = pickLocation;
 	}
 
 

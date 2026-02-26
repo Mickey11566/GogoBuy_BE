@@ -1,5 +1,7 @@
 package com.example.demo.response;
 
+import java.util.List;
+
 public class GetUserInfoRes extends BasicRes {
 
 	private String id;
@@ -22,6 +24,16 @@ public class GetUserInfoRes extends BasicRes {
 	private int timesRemaining;
 
 	private String provider;
+	
+	private List<Integer> favoriteStore;
+
+	public List<Integer> getFavoriteStore() {
+		return favoriteStore;
+	}
+
+	public void setFavoriteStore(List<Integer> favoriteStore) {
+		this.favoriteStore = favoriteStore;
+	}
 
 	public String getProvider() {
 		return provider;
@@ -111,8 +123,24 @@ public class GetUserInfoRes extends BasicRes {
 		super(code, message);
 	}
 
+//	public GetUserInfoRes(int code, String message, String id, String nickname, String email, String phone,
+//			String avatarUrl, String carrier, int exp, String role, int timesRemaining, String provider) {
+//		super(code, message);
+//		this.id = id;
+//		this.nickname = nickname;
+//		this.email = email;
+//		this.phone = phone;
+//		this.avatarUrl = avatarUrl;
+//		this.role = role;
+//		this.carrier = carrier;
+//		this.exp = exp;
+//		this.timesRemaining = timesRemaining;
+//		this.provider = provider;
+//	}
+
 	public GetUserInfoRes(int code, String message, String id, String nickname, String email, String phone,
-			String avatarUrl, String carrier, int exp, String role, int timesRemaining, String provider) {
+			String avatarUrl, String role, String carrier, int exp, int timesRemaining, String provider,
+			List<Integer> favoriteStore) {
 		super(code, message);
 		this.id = id;
 		this.nickname = nickname;
@@ -124,6 +152,7 @@ public class GetUserInfoRes extends BasicRes {
 		this.exp = exp;
 		this.timesRemaining = timesRemaining;
 		this.provider = provider;
+		this.favoriteStore = favoriteStore;
 	}
 
 }

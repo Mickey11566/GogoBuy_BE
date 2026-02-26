@@ -1,5 +1,6 @@
 package com.example.demo.dao;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -71,4 +72,27 @@ public interface StoresSearchDao extends JpaRepository<Stores, Integer> {
 			@Param("radius") double radius, @Param("minLat") double minLat, @Param("maxLat") double maxLat,
 			@Param("minLng") double minLng, @Param("maxLng") double maxLng);
 
+	//	根據範圍(距離、種類)找營業中店家
+	@Query(value = "SELECT s.id, s.name, s.category, s.image, h.open_time, h.close_time " +
+            "FROM stores s " +
+            "JOIN store_operating_hours h ON s.id = h.stores_id " +
+            "WHERE s.id IN :storeIds " +
+            "AND s.is_deleted = 0 " +
+            "AND h.week = :dayOfWeek " +
+            "AND h.is_closed = 0 " + 
+            "AND (" +
+            "  CASE " +
+            "    WHEN h.open_time < h.close_time THEN :now BETWEEN h.open_time AND h.close_time " +
+            "    ELSE :now >= h.open_time OR :now <= h.close_time " +
+            "  END" +
+            ")", nativeQuery = true)
+List<Map<String, Object>> findOperatingStoresByIds(
+ @Param("storeIds") List<Integer> storeIds, 
+ @Param("now") LocalTime now,
+ @Param("dayOfWeek") int dayOfWeek
+);
+	
+	//	查詢多個店家是否存在
+	@Query(value="select id from stores where stores.id in :storesId", nativeQuery = true)
+	List<Integer> exsitStores(@Param("storesId") List<Integer>storesId) ;
 }

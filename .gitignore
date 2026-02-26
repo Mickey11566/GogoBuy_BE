@@ -3,10 +3,11 @@ HELP.md
 .metadata
 logs/
 build/
+src/main/resources/application.properties
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-
+.metadata
 ### STS ###
 .apt_generated
 .classpath

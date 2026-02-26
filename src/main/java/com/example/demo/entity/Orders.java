@@ -62,6 +62,15 @@ public class Orders {
 	
 	@Column(name = "is_deleted")
 	private boolean deleted;
+	
+	@Column(name = "menu_name")
+	private String menuName;
+	
+	@Column(name = "base_price")
+	private int basePrice;
+	
+	@Column(name = "spec_price")
+	private int specPrice;
 
 	public int getId() {
 		return id;
@@ -173,6 +182,30 @@ public class Orders {
 
 	public void setPersonalMemo(String personalMemo) {
 		this.personalMemo = personalMemo;
+	}
+
+	public String getMenuName() {
+		return menuName;
+	}
+
+	public void setMenuName(String menuName) {
+		this.menuName = menuName;
+	}
+
+	public int getBasePrice() {
+		return basePrice;
+	}
+
+	public void setBasePrice(int basePrice) {
+		this.basePrice = basePrice;
+	}
+
+	public int getSpecPrice() {
+		return specPrice;
+	}
+
+	public void setSpecPrice(int specPrice) {
+		this.specPrice = specPrice;
 	}
 
 

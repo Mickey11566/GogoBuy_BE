@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.request.StoresReq;
+import com.example.demo.request.StoresReq.CreateStoreGroup;
+import com.example.demo.request.StoresReq.SearchStoreGroup;
 import com.example.demo.response.BasicRes;
 import com.example.demo.response.StoresRes;
 import com.example.demo.service.StoreService;
@@ -26,7 +29,7 @@ public class StoresController {
 	private StoreService storeService;
 
 	@PostMapping("gogobuy/store/create")
-	public BasicRes create(@Valid @RequestBody StoresReq req) {
+	public BasicRes create(@Validated(CreateStoreGroup.class) @RequestBody StoresReq req) {
 	    try {
 	        return storeService.create(req);
 	    } catch (Exception e) {
@@ -123,4 +126,10 @@ public class StoresController {
 	    // 呼叫 Service
 	    return storeService.getNearbyStores(lat, lng, address, radius);
 	}
+	
+	//範圍內營業中店家
+	@PostMapping("gogobuy/store/getOperatingStores")
+    public StoresRes getOperatingStores(@Validated(SearchStoreGroup.class) @RequestBody StoresReq req) {
+        return storeService.getOperatingStores(req);
+    }
 }

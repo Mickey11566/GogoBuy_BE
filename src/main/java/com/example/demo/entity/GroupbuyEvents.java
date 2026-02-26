@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import com.example.demo.constants.GroupbuyStatusEnum;
 import com.example.demo.constants.SplitTypeEnum;
 
-import jakarta.annotation.Generated;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -71,6 +70,12 @@ public class GroupbuyEvents {
 
 	@Column(name = "is_deleted")
 	private boolean deleted;
+	
+	@Column(name = "pickup_time")
+	private LocalDateTime pickupTime;
+	
+	@Column(name = "pick_location")
+	private String pickLocation;
 
 	@Transient // 代表此欄位不屬於資料庫表，僅供程式內部使用
 	private String nickname;
@@ -211,4 +216,21 @@ public class GroupbuyEvents {
 		this.deleted = deleted;
 	}
 
+	public LocalDateTime getPickupTime() {
+		return pickupTime;
+	}
+
+	public void setPickupTime(LocalDateTime pickupTime) {
+		this.pickupTime = pickupTime;
+	}
+
+	public String getPickLocation() {
+		return pickLocation;
+	}
+
+	public void setPickLocation(String pickLocation) {
+		this.pickLocation = pickLocation;
+	}
+
+	
 }

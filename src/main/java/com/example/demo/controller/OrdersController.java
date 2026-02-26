@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.request.OredersReq;
 import com.example.demo.response.BasicRes;
 import com.example.demo.response.GroupbuyEventsRes;
+import com.example.demo.response.OrderHistoryRes;
 import com.example.demo.service.OrdersService;
 
 import jakarta.validation.Valid;
@@ -29,11 +30,11 @@ public class OrdersController {
 		return ordersService.addOrders(req);
 	}
 
-	// 更新訂單
-	@PostMapping("gogobuy/event/updateOrders")
-	public BasicRes updateOrders(@Valid @RequestBody OredersReq req) {
-		return ordersService.updateOrders( req);
-	}
+	// // 更新訂單
+	// @PostMapping("gogobuy/event/updateOrders")
+	// public BasicRes updateOrders(@Valid @RequestBody OredersReq req) {
+	// return ordersService.updateOrders(req);
+	// }
 
 	// 查詢跟團者的開團
 	@GetMapping("gogobuy/event/getOrdersIdByUserId")
@@ -49,10 +50,11 @@ public class OrdersController {
 	}
 
 	// 回傳計算完的平均運費
-//	@GetMapping("gogobuy/getShippingFeeByEventId")
-//	public ShippingFeeRes getShippingFeeByEventId(@RequestParam(name = "events_id") int eventsId) {
-//		return ordersService.getShippingFeeByEventId(eventsId);
-//	}
+	// @GetMapping("gogobuy/getShippingFeeByEventId")
+	// public ShippingFeeRes getShippingFeeByEventId(@RequestParam(name =
+	// "events_id") int eventsId) {
+	// return ordersService.getShippingFeeByEventId(eventsId);
+	// }
 
 	// 軟刪除
 	@PostMapping("gogobuy/event/deleteOrderByUserIdAndEventsId")
@@ -72,6 +74,12 @@ public class OrdersController {
 	@PostMapping("gogobuy/order/deleteOrderById")
 	private BasicRes deleteOrder(@RequestParam(name = "order_id") int orderId) {
 		return ordersService.deleteCartByOrderId(orderId);
+	}
+
+	// 取得使用者的歷史訂單
+	@GetMapping("gogobuy/orders/history")
+	public OrderHistoryRes getHistoryOrdersByUserId(@Valid @RequestParam(name = "user_id") String userId) {
+		return ordersService.getHistoryOrdersByUserId(userId);
 	}
 
 }

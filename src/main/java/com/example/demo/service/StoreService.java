@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -614,7 +616,7 @@ public class StoreService {
 	public StoresRes getStoresByName(String name) {
 		try {
 			// 修正點：如果未輸入或只有空白，直接回傳空清單
-			if (StringUtils.hasText(name)) {
+			if (!StringUtils.hasText(name)) {
 				return new StoresRes(ResMessage.INPUT_IS_EMPTY.getCode(), "請輸入搜尋關鍵字喵!", null);
 			}
 
@@ -906,7 +908,7 @@ public class StoreService {
 	}
 
 	private int categoryReturnId(int storeId, String name, String priceLevel) {
-		MenuCategories categories = new MenuCategories(); // 確保這裡跟你 Entity 名稱一致
+		MenuCategories categories = new MenuCategories(); 
 		categories.setStoreId(storeId);
 		categories.setName(name);
 		categories.setPriceLevel(priceLevel);
@@ -915,6 +917,34 @@ public class StoreService {
 		categories = menuCategoryRepository.save(categories);
 
 		return categories.getId();
+	}
+	
+	public StoresRes getOperatingStores(StoresReq req) {
+	    if (CollectionUtils.isEmpty(req.getFilteredStoreIds())) {
+	        return new StoresRes(200, "無篩選範圍內的店家喵！");
+	    }
+	    try {
+	        LocalDateTime ldt = LocalDateTime.now();
+	        LocalTime now = ldt.toLocalTime();
+	        
+	        int dayOfWeek = ldt.getDayOfWeek().getValue(); 
+
+	        List<Map<String, Object>> storeList = storesSearchDao.findOperatingStoresByIds(
+	                req.getFilteredStoreIds(), 
+	                now, 
+	                dayOfWeek
+	        );
+
+	        if (CollectionUtils.isEmpty(storeList)) {
+	            return new StoresRes(404, "所選店家目前皆非營業時間(或今日公休)喵！");
+	        }
+
+	        StoresRes res = new StoresRes(200, "搜尋成功喵！共 " + storeList.size() + " 筆喵！");
+	        res.setStoreOperatingList(storeList);
+	        return res;
+	    } catch (Exception e) {
+	        return new StoresRes(500, "系統錯誤喵...: " + e.getMessage());
+	    }
 	}
 
 }

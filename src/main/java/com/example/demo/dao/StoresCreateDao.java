@@ -12,8 +12,8 @@ import jakarta.transaction.Transactional;
 @Repository
 public interface StoresCreateDao extends JpaRepository<Stores, Integer> {
 
-	// 檢查是否有電話已經存在
-	@Query(value = "SELECT COUNT(*) FROM stores WHERE phone = ?1 AND is_deleted = false", nativeQuery = true)
+	// 檢查是否有電話(已經存在)
+	@Query(value = "SELECT COUNT(*) FROM stores WHERE phone = ?1 AND is_deleted = false AND is_public = true", nativeQuery = true)
 	public int existsByPhone(String phone);
 
 	// 新增店家

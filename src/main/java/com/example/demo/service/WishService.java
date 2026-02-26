@@ -149,7 +149,7 @@ public class WishService {
 	}
 	
 	@Transactional(rollbackOn = Exception.class)
-	public BasicRes finishWish(int id, String userId) throws Exception{
+	public BasicRes finishWish(int id, String userId, String targetUrl) throws Exception{
 		final String userIdPattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
 		if(!userId.matches(userIdPattern)) {
 			return new BasicRes(ResMessage.USER_NOT_FOUND.getCode(), ResMessage.USER_NOT_FOUND.getMessage());
@@ -180,21 +180,20 @@ public class WishService {
 			wishersList.remove(userId);
 		}
 		try {
-//			int eventId=wishDao.getEventId(userId);
 			NotifiCategoryEnum wish=NotifiCategoryEnum.WISH;
 			NotifiMes wishersMsg = new NotifiMes();
 			wishersMsg.setCategory(wish);
 			wishersMsg.setTitle("願望開團成功!!");
-//			wishersMsg.setTargetUrl("http://localhost:4200/"+eventId);
+			wishersMsg.setTargetUrl(targetUrl);
 			wishersMsg.setUserId(userId);
 			wishersMsg.setContent("願望開團成功，快去下單!!");
+			wishersMsg.setEventId(id);
 			notifiMsgRepository.save(wishersMsg);
 			wishDao.addRecipientsBatch(wishersMsg.getId(), wishersList);
 			wishDao.finishWish(id);
 		}catch(Exception e){
 			throw e;
 		}
-
 		return new BasicRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage());
 	}
 	

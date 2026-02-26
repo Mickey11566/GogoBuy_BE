@@ -41,6 +41,10 @@ public class GroupbuyEventsResNew extends BasicRes{
 	private int limitation;
 
 	private boolean deleted;
+	
+	private LocalDateTime pickupTime;
+	
+	private String pickLocation;
 
 	public int getId() {
 		return id;
@@ -169,6 +173,24 @@ public class GroupbuyEventsResNew extends BasicRes{
 	public void setDeleted(boolean deleted) {
 		this.deleted = deleted;
 	}
+	
+	
+
+	public LocalDateTime getPickupTime() {
+		return pickupTime;
+	}
+
+	public void setPickupTime(LocalDateTime pickupTime) {
+		this.pickupTime = pickupTime;
+	}
+
+	public String getPickLocation() {
+		return pickLocation;
+	}
+
+	public void setPickLocation(String pickLocation) {
+		this.pickLocation = pickLocation;
+	}
 
 	public GroupbuyEventsResNew() {
 		super();
@@ -180,10 +202,13 @@ public class GroupbuyEventsResNew extends BasicRes{
 		// TODO Auto-generated constructor stub
 	}
 
+	
+
 	public GroupbuyEventsResNew(int code, String message, int id, String hostId, int storesId, String eventName,
 			GroupbuyStatusEnum status, LocalDateTime endTime, int totalOrderAmount, int shippingFee,
 			SplitTypeEnum splitType, String announcement, String type, String tempMenuList, String recommendList,
-			String recommendDescription, int limitation, boolean deleted) {
+			String recommendDescription, int limitation, boolean deleted, LocalDateTime pickupTime,
+			String pickLocation) {
 		super(code, message);
 		this.id = id;
 		this.hostId = hostId;
@@ -201,6 +226,8 @@ public class GroupbuyEventsResNew extends BasicRes{
 		this.recommendDescription = recommendDescription;
 		this.limitation = limitation;
 		this.deleted = deleted;
+		this.pickupTime = pickupTime;
+		this.pickLocation = pickLocation;
 	}
 
 	public GroupbuyEventsResNew(int code, String message, int id) {

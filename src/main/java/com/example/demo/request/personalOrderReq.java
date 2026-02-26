@@ -3,6 +3,7 @@ package com.example.demo.request;
 import java.time.LocalDateTime;
 
 import com.example.demo.constants.PaymentStatus;
+import com.example.demo.constants.PickupStatusEnum;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,22 +13,41 @@ public class personalOrderReq {
 	private int id;
 	@NotNull(message = "團ID必填")
 	private int eventsId;
-	
+
 	@NotBlank(message = "跟團者ID必填")
 	private String userId;
 
 	private double totalWeight;
-	
+
 	@NotNull(message = "個人運費必填")
 	private int personFee;
-	
+
 	@NotNull(message = "該單總額必填")
 	private int totalSum;
-	
 
 	private PaymentStatus paymentStatus;
 
 	private LocalDateTime paymentTime;
+
+	private PickupStatusEnum pickupStatus;
+
+	private LocalDateTime pickupTime;
+
+	public PickupStatusEnum getPickupStatus() {
+		return pickupStatus;
+	}
+
+	public void setPickupStatus(PickupStatusEnum pickupStatus) {
+		this.pickupStatus = pickupStatus;
+	}
+
+	public LocalDateTime getPickupTime() {
+		return pickupTime;
+	}
+
+	public void setPickupTime(LocalDateTime pickupTime) {
+		this.pickupTime = pickupTime;
+	}
 
 	public int getId() {
 		return id;
@@ -93,5 +113,4 @@ public class personalOrderReq {
 		this.paymentTime = paymentTime;
 	}
 
-	
 }

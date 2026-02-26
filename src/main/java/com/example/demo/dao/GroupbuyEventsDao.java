@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.entity.GroupbuyEvents;
+import com.example.demo.entity.GroupsSearchView;
 import com.example.demo.entity.Menu;
 import com.example.demo.entity.OrdersSearchView;
 import com.example.demo.projection.GroupbuyEventsProjection;
@@ -42,10 +43,11 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	@Query(value = "update groupbuy_events set host_id = ?1, stores_id = ?2, event_name = ?3, status = ?4, "
 			+ "end_time = ?5, total_order_amount = ?6, shipping_fee = ?7, "
 			+ "split_type = ?8, announcement = ?9, type= ?10, temp_menu = ?11, "
-			+ "recommend = ?12, recommend_description = ?13, limitation = ?14 where id = ?15", nativeQuery = true)
+			+ "recommend = ?12, recommend_description = ?13, limitation = ?14 , pick_location = ?15 , pickup_time = ?16 where id = ?17", nativeQuery = true)
 	public int updateEvent(String hostId, int storesId, String eventName, String status, LocalDateTime endTime,
 			int totalOrderAmount, int shippingFee, String splitType, String announcement, String type, String tempMenu,
-			String recommend, String recommendDescription, int limitation, int id);
+			String recommend, String recommendDescription, int limitation, String pickLocation,
+			LocalDateTime pickupTime, int id);
 
 	// 更新總金額
 	@Transactional
@@ -64,10 +66,10 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	@Query(value = "update groupbuy_events set status = ?1 where end_time <= ?2 and status = ?3 and is_deleted = false", nativeQuery = true)
 	public int autoUpdateEventsStatus(String targetStatus, LocalDateTime now, String currentStatus);
 
-	// 軟刪除
+	// 先刪子表再刪主表(這個是要接API的刪除)
 	@Transactional
 	@Modifying
-	@Query(value = "update groupbuy_events set is_deleted = true where events_id = ?1 and is_deleted = false", nativeQuery = true)
+	@Query(value = "delete from groupbuy_events where id = ?1 ", nativeQuery = true)
 	public int delete(int eventsId);
 
 	// 用 hostId 檢索主表
@@ -83,16 +85,16 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	public List<GroupbuyEventsProjection> getAll();
 
 	// eventsId 查詢 event
-//	@Query(value = "select * from groups_search_view where event_id = ?1 and is_deleted = false", nativeQuery = true)
-//	public List<GroupsSearchView> getEventsByEventsId(int id);
+	// @Query(value = "select * from groups_search_view where event_id = ?1 and
+	// is_deleted = false", nativeQuery = true)
+	// public List<GroupsSearchView> getEventsByEventsId(int id);
 
-	@Query(value = "SELECT e.*, CASE WHEN e.is_deleted = 0 THEN false ELSE true END AS deleted, "
-			+ "e.temp_menu AS tempMenuList, e.recommend AS recommendList, u.nickname AS nickname "
-			+ "FROM groupbuy_events e JOIN user u ON e.host_id = u.id " + "WHERE e.id = ?1 ", nativeQuery = true)
-	public List<GroupbuyEventsProjection> getEventsByEventsId(int id);
+	@Query(value = "select * from groups_search_view where event_id = ?1 ", nativeQuery = true)
+	public List<GroupsSearchView> getEventsByEventsId(int eventId);
 
-//		@Query(value = "SELECT * FROM groupbuy_events  WHERE id = ?1 AND is_deleted = false", nativeQuery = true)
-//		public List<GroupbuyEvents> getEventsByEventsId1(int id);
+	// @Query(value = "SELECT * FROM groupbuy_events WHERE id = ?1 AND is_deleted =
+	// false", nativeQuery = true)
+	// public List<GroupbuyEvents> getEventsByEventsId1(int id);
 
 	// 用店家Id找符合的團
 	@Query(value = "select * from groupbuy_events where stores_id = ?1 and is_deleted = false ", nativeQuery = true)
@@ -119,4 +121,8 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	// 查詢orders映射表
 	@Query(value = "select * from orders_search_view where event_id = ?1 and is_deleted = false", nativeQuery = true)
 	public List<OrdersSearchView> selectOrdersAll(int eventId);
+
+	// 查詢 event 裡面的 storeId
+	@Query(value = "select stores_id from groupbuy_events where id = ?1 and is_deleted = false", nativeQuery = true)
+	public int selectStoreIdByEventId(int eventId);
 }

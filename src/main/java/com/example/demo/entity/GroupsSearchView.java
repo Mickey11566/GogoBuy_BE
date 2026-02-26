@@ -81,6 +81,12 @@ public class GroupsSearchView {
 	
 	@Column(name = "is_deleted")
 	private boolean deleted;
+	
+	@Column(name = "pickup_time")
+	private LocalDateTime pickupTime;
+	
+	@Column(name = "pick_location")
+	private String pickLocation;
 
 	public int getEventId() {
 		return eventId;
@@ -248,6 +254,22 @@ public class GroupsSearchView {
 
 	public void setStoreImage(String storeImage) {
 		this.storeImage = storeImage;
+	}
+
+	public LocalDateTime getPickupTime() {
+		return pickupTime;
+	}
+
+	public void setPickupTime(LocalDateTime pickupTime) {
+		this.pickupTime = pickupTime;
+	}
+
+	public String getPickLocation() {
+		return pickLocation;
+	}
+
+	public void setPickLocation(String pickLocation) {
+		this.pickLocation = pickLocation;
 	}
 
 	

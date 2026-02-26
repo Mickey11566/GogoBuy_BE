@@ -14,8 +14,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 public class StoresReq {
+	
+	public interface CreateStoreGroup {}  // 用於新增店家
+	public interface SearchStoreGroup {}  // 用於搜尋營業店家
 
-	@NotBlank(message = ValidationMsg.STORE_NAME_EMPTY)
+	@NotBlank(message = ValidationMsg.STORE_NAME_EMPTY, groups = CreateStoreGroup.class)
 	private String storesname;
 
 //	@NotBlank(message = ValidationMsg.PHONE_EMPTY)
@@ -24,10 +27,10 @@ public class StoresReq {
 //	@NotBlank(message = ValidationMsg.ADDRESS_EMPTY)
 	private String address;
 
-	@NotBlank(message = ValidationMsg.CATEGORY_EMPTY)
+	@NotBlank(message = ValidationMsg.CATEGORY_EMPTY, groups = CreateStoreGroup.class)
 	private String category;
 
-	@NotBlank(message = ValidationMsg.TYPE_EMPTY)
+	@NotBlank(message = ValidationMsg.TYPE_EMPTY, groups = CreateStoreGroup.class)
 	private String type;
 
 	private String memo;
@@ -54,7 +57,8 @@ public class StoresReq {
 	private List<ProductOptionGroupsVo> productOptionGroupsVoList;
 	@Valid
 	private List<ProductOptionItemsVo> productOptionItemsVoList;
-
+	@Valid
+	private List<Integer> filteredStoreIds;
 
 	public String getStoresname() {
 		return storesname;
@@ -191,6 +195,14 @@ public class StoresReq {
 
 	public void setLat(Double lat) {
 		this.lat = lat;
+	}
+
+	public List<Integer> getFilteredStoreIds() {
+		return filteredStoreIds;
+	}
+
+	public void setFilteredStoreIds(List<Integer> filteredStoreIds) {
+		this.filteredStoreIds = filteredStoreIds;
 	}
 
 	

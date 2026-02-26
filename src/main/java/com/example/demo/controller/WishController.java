@@ -44,8 +44,9 @@ public class WishController {
 	}
 	
 	@PostMapping("gogobuy/wish/finish_wish")
-	public BasicRes finish(@RequestParam("id") int id, @RequestParam("userId") String userId) throws Exception {
-		return wishService.finishWish(id, userId);
+	public BasicRes finish(@RequestParam("id") int id, @RequestParam("userId") String userId,  //
+			@RequestParam("targetUrl") String targetUrl) throws Exception {
+		return wishService.finishWish(id, userId, targetUrl);
 	}
 	
 	@PostMapping("gogobuy/wish/delete_wish")

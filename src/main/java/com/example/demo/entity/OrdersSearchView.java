@@ -72,9 +72,7 @@ public class OrdersSearchView {
 	private String hostId;
 	
 	@Column(name = "user_nickname")
-	private String hostNickname;
-	
-	
+	private String hostNickname;	
 
 	public List<Map<String, Object>> getSelectedOptionList() {
 		return selectedOptionList;
