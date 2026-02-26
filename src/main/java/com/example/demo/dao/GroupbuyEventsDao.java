@@ -67,10 +67,11 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	public int autoUpdateEventsStatus(String targetStatus, LocalDateTime now, String currentStatus);
 
 	// 先刪子表再刪主表(這個是要接API的刪除)
+	//軟刪
 	@Transactional
 	@Modifying
-	@Query(value = "delete from groupbuy_events where id = ?1 ", nativeQuery = true)
-	public int delete(int eventsId);
+	@Query(value = "update is_deleted = true from groupbuy_events where id = ?1 ", nativeQuery = true)
+	public int fakeDelete(int eventsId);
 
 	// 用 hostId 檢索主表
 	@Query(value = "select * from groupbuy_events  where host_id = ?1 and is_deleted = false ", nativeQuery = true)
@@ -113,6 +114,11 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	@Modifying
 	@Query(value = "delete from groupbuy_events where id = ?1", nativeQuery = true)
 	public int deleteEvent(int id);
+	
+	// 軟刪除
+	@Modifying
+	@Query(value = "update is_deleted = true from groupbuy_events where id = ?1", nativeQuery = true)
+	public int fakeDeleteEvent(int id);
 
 	// 查詢全部的映射表
 	@Query(value = "select * from groups_search_view ", nativeQuery = true)
