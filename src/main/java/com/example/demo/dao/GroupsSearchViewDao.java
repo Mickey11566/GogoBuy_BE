@@ -28,4 +28,5 @@ public interface GroupsSearchViewDao extends JpaRepository<GroupsSearchView, Int
 		       nativeQuery = true)
 		public List<GroupsSearchView> findAllMyRelatedEvents(String userId);
 		
+		public GroupsSearchView findById(int eventId);
 }

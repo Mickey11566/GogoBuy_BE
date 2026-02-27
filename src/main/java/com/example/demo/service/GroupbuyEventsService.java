@@ -329,6 +329,16 @@ public class GroupbuyEventsService {
 	// 結單功能
 	@Transactional
 	public BasicRes closeEvent(int id, String userId) {
+        GroupbuyEvents event = groupbuyEventsDao.findById(id);
+        if (event == null) {
+            return new BasicRes(404, "找不到該團購活動");
+        }
+        // 判斷成團門檻 (未成團邏輯)
+        if (event.getTotalOrderAmount() < event.getLimitation()) {
+            fakeDelete(id);
+            groupbuyEventsDao.updateStatus(GroupbuyStatusEnum.CANCELLED.name(), id, userId);
+            return new BasicRes(200, "人數不足，已自動取消該團");
+        }
 		// 更新活動狀態為 FINISHED
 		groupbuyEventsDao.updateStatus(GroupbuyStatusEnum.FINISHED.name(), id, userId);
 		List<String> userIdList = ordersDao.getUserIdByEventsId(id);
@@ -497,7 +507,7 @@ public class GroupbuyEventsService {
 			return new BasicRes(404, "找不到該團購活動或活動已被刪除");
 		}
 		// 軟刪除主表
-		int deletedEvent = groupbuyEventsDao.delete(eventsId);
+        int deletedEvent = groupbuyEventsDao.deleteEvent(eventsId);
 		if (deletedEvent > 0) {
 			// 順便刪除子表
 			ordersDao.deleteAllOrdersByEventId(eventsId);
@@ -505,7 +515,24 @@ public class GroupbuyEventsService {
 		}
 		return new BasicRes(500, "刪除活動失敗，請稍後再試");
 	}
-
+    
+    // 軟刪除
+    @Transactional
+    public BasicRes fakeDelete(int eventsId) {
+        // 檢查該活動是否存在且尚未被刪除
+        GroupbuyEvents event = groupbuyEventsDao.findById(eventsId);
+        if (event == null) {
+            return new BasicRes(404, "找不到該團購活動或活動已被刪除");
+        }
+        // 軟刪除主表
+        int fakeDelete = groupbuyEventsDao.fakeDelete(eventsId);
+        if (fakeDelete > 0) {
+            // 順便刪除子表
+            ordersDao.deleteAllOrdersByEventId(eventsId);
+            return new BasicRes(200, "團購活動ID: " + eventsId + "已成功刪除");
+        }
+        return new BasicRes(500, "刪除活動失敗，請稍後再試");
+    }
 	// 給團長看全部的orders
 	public GroupbuyEventsRes getOrdersAll(int eventId) {
 		List<OrdersSearchView> ordersSearchViewList = groupbuyEventsDao.selectOrdersAll(eventId);
