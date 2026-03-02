@@ -32,10 +32,10 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	// 檢查開團活動
 	@Query(value = "select count(*) from groupbuy_events where host_id = ?1 and stores_id = ?2 and status = 'OPEN' and is_deleted = false", nativeQuery = true)
 	public int checkEvnet(String hostId, int storesId);
-	
+
 	// 看所有開團活動
-		@Query(value = "select * from groupbuy_events where status = 'OPEN' and is_deleted = false", nativeQuery = true)
-		public List<GroupbuyEventsProjection> getAllEvent();
+	@Query(value = "select e.*, u.nickname AS nickname from groupbuy_events e JOIN user u ON e.host_id = u.id where e.status = 'OPEN' and e.is_deleted = false", nativeQuery = true)
+	public List<GroupbuyEventsProjection> getAllEvent();
 
 	// 查所屬團ID
 	@Query(value = "select* from groupbuy_events where id = ?1", nativeQuery = true)
@@ -71,7 +71,7 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	public int autoUpdateEventsStatus(String targetStatus, LocalDateTime now, String currentStatus);
 
 	// 先刪子表再刪主表(這個是要接API的刪除)
-	//軟刪
+	// 軟刪
 	@Transactional
 	@Modifying
 	@Query(value = "update groupbuy_events set is_deleted = true where id = ?1 ", nativeQuery = true)
@@ -118,7 +118,7 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	@Modifying
 	@Query(value = "delete from groupbuy_events where id = ?1", nativeQuery = true)
 	public int deleteEvent(int id);
-	
+
 	// 軟刪除
 	@Modifying
 	@Query(value = "update is_deleted = true from groupbuy_events where id = ?1", nativeQuery = true)
