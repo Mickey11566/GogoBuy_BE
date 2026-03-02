@@ -691,6 +691,9 @@ public class StoreService {
 				}
 				menuVoList.add(mVo);
 			}
+			
+			//測試BUG
+			
 			res.setMenuVoList(menuVoList);
 
 			// 選項群組與細項 (兩層巢狀)
