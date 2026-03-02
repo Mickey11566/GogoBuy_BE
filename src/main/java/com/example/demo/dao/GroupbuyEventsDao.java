@@ -32,6 +32,10 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	// 檢查開團活動
 	@Query(value = "select count(*) from groupbuy_events where host_id = ?1 and stores_id = ?2 and status = 'OPEN' and is_deleted = false", nativeQuery = true)
 	public int checkEvnet(String hostId, int storesId);
+	
+	// 看所有開團活動
+		@Query(value = "select * from groupbuy_events where status = 'OPEN' and is_deleted = false", nativeQuery = true)
+		public List<GroupbuyEventsProjection> getAllEvent();
 
 	// 查所屬團ID
 	@Query(value = "select* from groupbuy_events where id = ?1", nativeQuery = true)
@@ -70,7 +74,7 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	//軟刪
 	@Transactional
 	@Modifying
-	@Query(value = "update is_deleted = true from groupbuy_events where id = ?1 ", nativeQuery = true)
+	@Query(value = "update groupbuy_events set is_deleted = true where id = ?1 ", nativeQuery = true)
 	public int fakeDelete(int eventsId);
 
 	// 用 hostId 檢索主表

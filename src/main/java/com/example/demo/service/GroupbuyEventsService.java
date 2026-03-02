@@ -527,7 +527,7 @@ public class GroupbuyEventsService {
 	// 回傳全部開團的
 	public GroupbuyEventsRes getAll() {
 		try {
-			List<GroupbuyEventsProjection> list = groupbuyEventsDao.getAll();
+			List<GroupbuyEventsProjection> list = groupbuyEventsDao.getAllEvent();
 			if (list == null) {
 				return new GroupbuyEventsRes(400, "目前暫無任何開團資料");
 			}

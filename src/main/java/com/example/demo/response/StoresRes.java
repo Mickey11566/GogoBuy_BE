@@ -52,7 +52,8 @@ public class StoresRes extends BasicRes {
 
 	// 供詳細資料 getStoreById 使用的完整建構子
 	public StoresRes(int code, String message, List<Stores> storeList, List<StoreOperatingHoursVo> operatingHoursVoList,
-			List<MenuVo> menuVoList, List<MenuCategoriesVo> menuCategoriesVoList,
+			List<MenuVo> menuVoList, 
+			List<MenuCategoriesVo> menuCategoriesVoList,
 			List<ProductOptionGroupsVo> productOptionGroupsVoList) {
 		super(code, message);
 		this.storeList = storeList;
