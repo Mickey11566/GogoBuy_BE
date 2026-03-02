@@ -1,4 +1,6 @@
+src/main/resources/application.properties
 HELP.md
+src/main/resources/application.properties
 .gradle
 .metadata
 logs/

@@ -95,4 +95,11 @@ List<Map<String, Object>> findOperatingStoresByIds(
 	//	查詢多個店家是否存在
 	@Query(value="select id from stores where stores.id in :storesId", nativeQuery = true)
 	List<Integer> exsitStores(@Param("storesId") List<Integer>storesId) ;
+	
+	//	查價格級距
+	@Query(value="SELECT mc.price_level "
+			+ "FROM menu m "
+			+ "JOIN menu_categories mc ON m.category_id = mc.id "
+			+ "WHERE m.id = ?", nativeQuery = true)
+	String getPriceLevelByMenuId(@Param("menuId") int menuId) ;
 }

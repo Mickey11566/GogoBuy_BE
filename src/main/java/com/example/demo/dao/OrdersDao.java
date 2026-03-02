@@ -19,7 +19,7 @@ public interface OrdersDao extends JpaRepository<Orders, Integer> {
 	@Modifying
 	@Query(value = "insert into orders(events_id, user_id, menu_id, quantity, selected_option, spec_name,"
 			+ "personal_memo, order_time, pickup_status, pickup_time, subtotal, weight) "
-			+ "values(?1, ?2, ?3, ?4, ?5, ?6, ?7, CURRENT_TIMESTAMP, ?8, ?9, ?10, ?11)", nativeQuery = true)
+			+ "values(?1, ?2, ?3, ?4, ?5, ?6, ?7,CURRENT_TIMESTAMP, ?8, ?9, ?10, ?11)", nativeQuery = true)
 	public int addOrders(int eventsId, String userId, int menuId, int quantity, String selectedOption,
 			String specName, String personalMemo, String pickupStatus, LocalDateTime pickupTime, int subtotal,
 			int weight);

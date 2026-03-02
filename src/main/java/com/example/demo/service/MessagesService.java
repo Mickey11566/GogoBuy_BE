@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import com.example.demo.constants.NotifiCategoryEnum;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import com.example.demo.constants.ResMessage;
 import com.example.demo.dao.GroupbuyEventsDao;
 import com.example.demo.dao.NotifiMesDao;
@@ -41,6 +44,15 @@ public class MessagesService {
 
 	@Autowired
 	private GroupbuyEventsDao groupbuyEventsDao;
+
+	@Autowired
+	private NotificationService notificationService;
+
+	@Autowired
+	private JavaMailSender mailSender;
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -85,18 +97,13 @@ public class MessagesService {
 			throw new IllegalArgumentException("無效的時間格式喵: " + req.getExpiredAt());
 		}
 
-//		檢查使用者id
+//		檢查使用者id (訊息發布者，選填)
 		String user = req.getUserId();
-		if (user != null) {
-
-			// if (user.trim().isEmpty()) {
-			if (!StringUtils.hasText(user)) {
-				throw new Exception("使用者id不能是空白喵");
-			}
+		if (StringUtils.hasText(user)) {
 			User checkUser = userDao.getUserById(user);
-
 			if (checkUser == null) {
-				throw new Exception("使用者id不存在喵");
+				System.err.println("Warning: notification sender userId '" + user + "' not found in DB, skipping sender validation.");
+				// 不拋出例外，允許通知繼續發送 (sender 不一定需要存在於 user 表)
 			}
 		}
 
@@ -106,8 +113,8 @@ public class MessagesService {
 		if (eventId != null) {
 			NotifiCategoryEnum category = req.getCategory();
 			if (NotifiCategoryEnum.GROUP_BUY.equals(category)) {
-				if (groupbuyEventsDao.findById(eventId).isEmpty()) {
-					throw new Exception("團購不存在喵");
+				if (groupbuyEventsDao.findById(eventId.intValue()) == null) {
+					throw new Exception("團購不存在");
 				}
 
 			}
@@ -117,20 +124,20 @@ public class MessagesService {
 	// 檢查使用者通知
 	private void checkUserNotif(List<UserNotificationVo> voList) throws Exception {
 		if (voList == null) {
-			throw new Exception("沒有收件者喵(沒有List喵)");
+			throw new Exception("沒有收件者");
 		} else {
 			for (UserNotificationVo vo : voList) {
 				String user = vo.getUserId();
 
 				// if (user == null || user.trim().isEmpty()) {
 				if (!StringUtils.hasText(user)) {
-					throw new Exception("沒有收件者喵(收件者為空喵)");
+					throw new Exception("沒有收件者");
 				}
 
 				User checkUser = userDao.getUserById(user);
 
 				if (checkUser == null) {
-					throw new Exception("收件者id不存在喵");
+					throw new Exception("收件者id不存在");
 				}
 			}
 		}
@@ -158,12 +165,51 @@ public class MessagesService {
 		int nofitId = mes.getId();
 		List<UserNotificationVo> UserNotificationVoList = req.getUserNotificationVoList();
 
+		// 準備推播訊息 JSON
+		String pushMessage = "";
+		try {
+			var pushObj = new java.util.HashMap<String, Object>();
+			pushObj.put("id", nofitId);
+			pushObj.put("category", req.getCategory().name());
+			pushObj.put("title", req.getTitle());
+			pushObj.put("message", req.getContent());
+			pushObj.put("link", req.getTargetUrl());
+			pushObj.put("createdAt", java.time.LocalDateTime.now().toString());
+			pushMessage = objectMapper.writeValueAsString(pushObj);
+		} catch (Exception e) {
+			pushMessage = req.getContent();
+		}
+
+		System.out.println("Creating notification: " + req.getTitle() + " for " + UserNotificationVoList.size() + " recipients.");
 		for (UserNotificationVo vo : UserNotificationVoList) {
+			System.out.println("Notifying user: " + vo.getUserId() + (StringUtils.hasText(vo.getEmail()) ? " (with email)" : ""));
 			userNotifDao.createUserNotifi(vo.getUserId(), nofitId);
+			
+			// 1. 站內即時通知 (SSE)
+			notificationService.sendNotification(vo.getUserId(), pushMessage);
+			
+			// 2. Email 通知
+			if (StringUtils.hasText(vo.getEmail())) {
+				sendPickupEmail(vo.getEmail(), req.getTitle(), req.getContent());
+			}
 		}
 
 		return new BasicRes(ResMessage.SUCCESS.getCode(), //
 				ResMessage.SUCCESS.getMessage());
+	}
+
+	private void sendPickupEmail(String email, String title, String content) {
+		try {
+			SimpleMailMessage message = new SimpleMailMessage();
+			message.setFrom("GogobuyAdmin@gmail.com");
+			message.setTo(email);
+			message.setSubject("[GoGoBuy] " + title);
+            message.setText("您好：\n\n" + content + "\n\n詳情請點擊 http://localhost:4200/gogobuy/home 查看 GoGoBuy 官網 。");
+			mailSender.send(message);
+		} catch (Exception e) {
+			// 郵件發送失敗不應中斷整個流程，僅紀錄錯誤
+			System.err.println("Failed to send email to " + email + ": " + e.getMessage());
+		}
 	}
 
 	// 更新通知
@@ -172,7 +218,7 @@ public class MessagesService {
 		checkNotifiMes(req);
 		checkUserNotif(req.getUserNotificationVoList());
 		NotifiMes mes = notifiMesDao.findById(id).orElseThrow(() -> //
-		new Exception("找不到該筆訊息 ID: " + id + " 喵"));
+		new Exception("找不到該筆訊息 ID: " + id ));
 
 		mes.setCategory(req.getCategory());
 		mes.setTitle(req.getTitle());
@@ -213,13 +259,13 @@ public class MessagesService {
 	public BasicRes delete(int notifId) throws Exception {
 //		檢查
 		NotifiMes mes = notifiMesDao.findById(notifId)
-				.orElseThrow(() -> new Exception("找不到該筆訊息 ID: " + notifId + "，刪除失敗喵"));
+				.orElseThrow(() -> new Exception("找不到該筆訊息 ID: " + notifId + "，刪除失敗"));
 		String title = mes.getTitle();
 //		砍子表
 		userNotifDao.deleteByNotifId(notifId);
 //		砍主表
 		notifiMesDao.deleteById(notifId);
-		return new BasicRes(ResMessage.SUCCESS.getCode(), "訊息標題:[" + title + "]已經被砍光了喵");
+		return new BasicRes(ResMessage.SUCCESS.getCode(), "訊息標題:[" + title + "]已經被砍光了");
 	}
 
 	// 根據使用者id搜尋通知
@@ -227,20 +273,20 @@ public class MessagesService {
 
 		// if (userId == null || userId.trim().isEmpty()) {
 		if (!StringUtils.hasText(userId)) {
-			throw new Exception("使用者id不能是空白喵");
+			throw new Exception("使用者id不能是空白");
 		}
 
 		User checkUser = userDao.getUserById(userId);
 
 		if (checkUser == null) {
-			throw new Exception("使用者id不存在喵");
+			throw new Exception("使用者id不存在");
 		}
 
 		// 獲取該使用者全部訊息細節
 		List<UserNotif> userMsgList = userNotifDao.searchByUser(userId);
 
 		if (userMsgList == null || userMsgList.isEmpty()) {
-			return new MessagesRes(ResMessage.SUCCESS.getCode(), "該使用者目前沒有訊息喵", //
+			return new MessagesRes(ResMessage.SUCCESS.getCode(), "該使用者目前沒有訊息", //
 					new ArrayList<>(), new ArrayList<>());
 		}
 

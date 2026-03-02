@@ -3,13 +3,20 @@ package com.example.demo.service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-
 import com.example.demo.constants.NotifiCategoryEnum;
+import com.example.demo.request.NotifiMesReq;
+import com.example.demo.vo.UserNotificationVo;
+import java.time.LocalDate;
+import java.util.stream.Collectors;
+import com.example.demo.entity.User;
+import com.example.demo.dao.UserDao;
 import com.example.demo.constants.ResMessage;
 import com.example.demo.constants.WishTypeEnum;
 import com.example.demo.dao.WishDao;
@@ -31,6 +38,12 @@ public class WishService {
 
 	@Autowired
 	private NotifiMesRepository notifiMsgRepository;
+
+	@Autowired
+	private MessagesService messagesService;
+
+	@Autowired
+	private UserDao userDao;
 
 	public AllWishRes allWish() {
 		List<Wishes> wishesData=wishDao.allWish();
@@ -172,26 +185,37 @@ public class WishService {
 		if (finished) {
 			return new BasicRes(ResMessage.WISH_IS_FINISHED.getCode(), ResMessage.WISH_IS_FINISHED.getMessage());
 		}
-		if(!wishersList.contains(userId) && !wishUser.equals(userId)) {  // 開團者非跟願人也非許願人
-			wishersList.add(wishUser);
+		// 收集所有需要通知的人 (排除執行操作的本人)
+		Set<String> notifyUserIds = new HashSet<>(wishersList);
+		if (!wishUser.equals(userId)) {
+			notifyUserIds.add(wishUser);
 		}
-		if(wishersList.contains(userId)) {  // 開團者為跟願人
-			wishersList.add(wishUser);
-			wishersList.remove(userId);
-		}
+		notifyUserIds.remove(userId);
+
 		try {
-			NotifiCategoryEnum wish=NotifiCategoryEnum.WISH;
-			NotifiMes wishersMsg = new NotifiMes();
-			wishersMsg.setCategory(wish);
-			wishersMsg.setTitle("願望開團成功!!");
-			wishersMsg.setTargetUrl(targetUrl);
-			wishersMsg.setUserId(userId);
-			wishersMsg.setContent("願望開團成功，快去下單!!");
-			wishersMsg.setEventId(id);
-			notifiMsgRepository.save(wishersMsg);
-			wishDao.addRecipientsBatch(wishersMsg.getId(), wishersList);
+			NotifiMesReq notifyReq = new NotifiMesReq();
+			notifyReq.setCategory(NotifiCategoryEnum.WISH);
+			notifyReq.setTitle("願望開團成功!!");
+			notifyReq.setContent("您許願/跟隨的「" + data[4].toString() + "」成功開團了，快去看看吧！");
+			notifyReq.setTargetUrl(targetUrl);
+			notifyReq.setUserId(userId); // 管理員或開團者 ID
+			notifyReq.setEventId(id);
+			notifyReq.setExpiredAt(LocalDate.now().plusDays(30).toString());
+			
+			notifyReq.setUserNotificationVoList(notifyUserIds.stream().map(uid -> {
+				UserNotificationVo vo = new UserNotificationVo();
+				vo.setUserId(uid);
+				User u = userDao.getUserById(uid);
+				if (u != null) {
+					vo.setEmail(u.getEmail());
+				}
+				return vo;
+			}).collect(Collectors.toList()));
+
+			messagesService.create(notifyReq);
+			
 			wishDao.finishWish(id);
-		}catch(Exception e){
+		} catch(Exception e){
 			throw e;
 		}
 		return new BasicRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage());

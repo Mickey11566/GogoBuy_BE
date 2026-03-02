@@ -2,7 +2,6 @@ package com.example.demo.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -59,8 +58,9 @@ public class OrdersController {
 	// 軟刪除
 	@PostMapping("gogobuy/event/deleteOrderByUserIdAndEventsId")
 	public BasicRes deleteOrderByUserIdAndEventsId(@RequestParam(name = "user_id") String userId, //
-			@RequestParam(name = "events_id") int eventsId) {
-		return ordersService.deleteOrderByUserIdAndEventsId(userId, eventsId);
+			@RequestParam(name = "events_id") int eventsId,
+			@RequestParam(name = "acting_user_id", required = false) String actingUserId) {
+		return ordersService.deleteOrderByUserIdAndEventsId(userId, eventsId, actingUserId);
 	}
 
 	// 硬刪除
@@ -72,8 +72,9 @@ public class OrdersController {
 
 	// 根據order id 軟刪除該筆資料
 	@PostMapping("gogobuy/order/deleteOrderById")
-	private BasicRes deleteOrder(@RequestParam(name = "order_id") int orderId) {
-		return ordersService.deleteCartByOrderId(orderId);
+	public BasicRes deleteOrderById(@RequestParam(name = "order_id") int orderId,
+			@RequestParam(name = "acting_user_id", required = false) String actingUserId) {
+		return ordersService.deleteCartByOrderId(orderId, actingUserId);
 	}
 
 	// 取得使用者的歷史訂單

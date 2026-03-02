@@ -42,4 +42,14 @@ public interface PersonalOrderDao extends JpaRepository<PersonalOrder, Integer> 
 	@Query(value = "select count(*) from personal_order where events_id = ?1 and payment_status not in ('PAID', 'CONFIRMED')", nativeQuery = true)
 	public int countUnpaidByEventsId(int eventId);
 
+    
+    // 查詢 eventId 跟 userId 的結單
+    @Query(value ="select * from personal_order where events_id = ?1 and user_id = ?2", nativeQuery = true)
+    public PersonalOrder findByEventsId(int eventId, String userId);
+    
+    // (已付款過) 更新 PaymentStatus 和 PaymentTime
+    @Transactional 
+    @Modifying
+    @Query(value = " update personal_order set payment_status ='PAID' , payment_time = now() where events_id = ?1 and user_id = ?2", nativeQuery = true)
+    public int updatePaymentStatusAndPaymentTime( int eventId, String userId);
 }

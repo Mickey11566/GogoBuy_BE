@@ -18,6 +18,8 @@ public class OredersReq {
     @NotBlank(message = "跟團者ID必填")
 	private String userId;
 
+	private String actingUserId;
+
 	private List<OrderMenuVo> menuList;
 	
 	private String personalMemo;
@@ -160,6 +162,14 @@ public class OredersReq {
 
 	public void setQuantity(int quantity) {
 		this.quantity = quantity;
+	}
+
+	public String getActingUserId() {
+		return actingUserId;
+	}
+
+	public void setActingUserId(String actingUserId) {
+		this.actingUserId = actingUserId;
 	}
 	
 	

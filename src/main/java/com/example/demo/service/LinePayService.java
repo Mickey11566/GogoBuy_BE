@@ -55,7 +55,7 @@ public class LinePayService {
         // 注意：localhost 的 confirmUrl 只能由你的瀏覽器觸發，LINE 伺服器連不到它
        // 跳轉網址 (RedirectUrls)：這告訴 LINE Pay 付完錢後要導向哪裡。
         RedirectUrls urls = new RedirectUrls(
-        		"http://localhost:8080/api/payments/linepay/confirm?amount=" + amount, 
+        		"http://localhost:4200/user/orders", 
         	    "http://localhost:8080/api/payments/linepay/cancel"
         );
 

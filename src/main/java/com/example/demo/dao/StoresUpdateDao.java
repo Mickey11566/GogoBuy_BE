@@ -71,16 +71,22 @@ public interface StoresUpdateDao extends JpaRepository<Stores, Integer> {
 	@Query(value = "DELETE FROM store_operating_hours WHERE stores_id = ?1", nativeQuery = true)
 	public void deleteOperatingHoursByStoreId(int storeId);
 
-	// 根據店家id刪除菜單
+	// 根據店家id刪除菜單品項 (就算有訂單也能刪，由上層先軟刪再硬刪)
 	@Modifying
 	@Transactional
-	@Query(value = "DELETE FROM menu WHERE stores_id = ?1", nativeQuery = true)
+	@Query(value = "DELETE FROM menu WHERE stores_id = ?1 AND id NOT IN (SELECT DISTINCT menu_id FROM orders WHERE is_deleted = false)", nativeQuery = true)
 	public void deleteMenuByStoreId(int storeId);
 
-	// 根據店家id刪除菜單分類
+	// 標記有訂單的菜單品項為不可用 (is_available = false，避免 FK 衝突，並阻止新团購選用)
 	@Modifying
 	@Transactional
-	@Query(value = "DELETE FROM menu_categories WHERE stores_id = ?1", nativeQuery = true)
+	@Query(value = "UPDATE menu SET is_available = false WHERE stores_id = ?1 AND id IN (SELECT DISTINCT menu_id FROM orders WHERE is_deleted = false)", nativeQuery = true)
+	public void markOrderedMenuItemsUnavailable(int storeId);
+
+	// 根據店家id刪除菜單分類 (如果分類內已無品項則刪除，否則保留)
+	@Modifying
+	@Transactional
+	@Query(value = "DELETE FROM menu_categories WHERE stores_id = ?1 AND id NOT IN (SELECT DISTINCT category_id FROM menu WHERE stores_id = ?1)", nativeQuery = true)
 	public void deleteMenuCategoriesByStoreId(int storeId);
 
 	// 根據店家id刪除群組選項

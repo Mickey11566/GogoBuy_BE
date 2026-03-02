@@ -48,7 +48,7 @@ public interface WishDao extends JpaRepository<Wishes, Integer>, WishRepository 
 	public void wishTimesReset(int minExp, int maxExp, int times);
 	
 //	查詢該願望的follower
-	@Query(value = "select user_id, followers, is_deleted, is_finished from wishes where id = ?", nativeQuery = true)
+	@Query(value = "select user_id, followers, is_deleted, is_finished, title from wishes where id = ?", nativeQuery = true)
 	public List<Object[]> getfollowers(int id);
 
 	// 許願followers更新

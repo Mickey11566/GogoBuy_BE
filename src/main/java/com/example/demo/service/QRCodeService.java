@@ -20,7 +20,7 @@ public class QRCodeService {
 	
 
     public BufferedImage generateGroupBuyQRCode(int eventId) throws Exception {
-    	// 基礎網址
+    	// 基礎網址(前端網址)
         String turnUrl = "http://localhost:4200/groupbuy-event/group-follow/";
         // 自動組合網址
         String fullUrl = turnUrl + eventId;

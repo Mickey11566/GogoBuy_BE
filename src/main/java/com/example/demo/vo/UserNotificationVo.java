@@ -7,6 +7,7 @@ public class UserNotificationVo {
 	private int notifId;
 	private boolean checked;
 	private boolean deleted;
+	private String email;
 	public int getId() {
 		return id;
 	}
@@ -37,16 +38,23 @@ public class UserNotificationVo {
 	public void setDeleted(boolean deleted) {
 		this.deleted = deleted;
 	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
 	public UserNotificationVo() {
 		super();
 	}
-	public UserNotificationVo(int id, String userId, int notifId, boolean checked, boolean deleted) {
+	public UserNotificationVo(int id, String userId, int notifId, boolean checked, boolean deleted, String email) {
 		super();
 		this.id = id;
 		this.userId = userId;
 		this.notifId = notifId;
 		this.checked = checked;
 		this.deleted = deleted;
+		this.email = email;
 	}
 	
 }

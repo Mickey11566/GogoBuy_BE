@@ -542,6 +542,8 @@ public class StoreService {
 
 		// 清除舊有的子表資料 (先刪除有外鍵關聯的底層資料)
 		// 順序：OptionItems -> OptionGroups -> Menu -> Categories -> Hours
+		// 先將「有訂單的菜單品項」標記為不可用，避免刪除時觸發 FK 衝突
+		storesUpdateDao.markOrderedMenuItemsUnavailable(storeId);
 		storesUpdateDao.deleteOptionItemsByStoreId(storeId);
 		storesUpdateDao.deleteOptionGroupsByStoreId(storeId);
 		storesUpdateDao.deleteMenuByStoreId(storeId);
