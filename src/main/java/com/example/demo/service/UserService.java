@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,10 +42,10 @@ public class UserService {
 
 	@Autowired
 	private UserDao userDao;
-	
+
 	@Autowired
 	private StoresSearchDao storesSrerchDao;
-	
+
 	@Autowired
 	private JavaMailSender mailSender;
 
@@ -53,6 +54,9 @@ public class UserService {
 
 	@Autowired
 	private JwtService jwtService;
+
+	@Value("${app.frontend.url}")
+	private String frontendUrl;
 
 	/**
 	 * Redis發送修改email驗證碼功能 暫時用不到
@@ -93,7 +97,7 @@ public class UserService {
 		String token = jwtService.createActivationToken(userId);
 
 		// 生成開通連結 (以前端 Angular 跑在 4200 port)
-		String activationUrl = "http://localhost:4200/active-account?token=" + token + "\n\n連結將於1小時後失效。";
+		String activationUrl = frontendUrl + "/active-account?token=" + token + "\n\n連結將於1小時後失效。";
 
 		try {
 			// 執行發送郵件
@@ -190,8 +194,8 @@ public class UserService {
 			return new GetUserInfoRes(ResMessage.USER_NOT_FOUND.getCode(), //
 					ResMessage.USER_NOT_FOUND.getMessage());
 		}
-		List<Integer>favoriteStores = getFavoriteStores(id);
-		
+		List<Integer> favoriteStores = getFavoriteStores(id);
+
 		return new GetUserInfoRes(ResMessage.SUCCESS.getCode(), //
 				ResMessage.SUCCESS.getMessage(), user.getId(), //
 				user.getNickname(), user.getEmail(), //
@@ -527,78 +531,76 @@ public class UserService {
 
 		return new BasicRes(ResMessage.SUCCESS.getCode(), "帳號已成功恢復為活躍狀態。");
 	}
-	
-//	private void favoriteStoresCheck(int storesId) throws Exception{
-//		if (storesSrerchDao.getStoreById(storesId)!=null) {
-//			throw new Exception("查無此店家喵");
-//		}
-//		return;
-//	}
-	
-	//更新最愛店家	
+
+	// private void favoriteStoresCheck(int storesId) throws Exception{
+	// if (storesSrerchDao.getStoreById(storesId)!=null) {
+	// throw new Exception("查無此店家喵");
+	// }
+	// return;
+	// }
+
+	// 更新最愛店家
 	@Transactional(rollbackOn = Exception.class)
 	public BasicRes updateFavoriteStores(String id, List<Integer> storesIdList) {
 		List<Integer> newList = (storesIdList == null) ? new ArrayList<>()//
-				: storesIdList.stream().distinct().collect(Collectors.toList());//去重
+				: storesIdList.stream().distinct().collect(Collectors.toList());// 去重
 		List<Integer> finalToSave;
-//		List<Integer> validStores= newlist.isEmpty() ? new ArrayList<>() : storesSrerchDao.exsitStores(newlist);
-		//	單數字>> 沒有>>新增 有>>刪除
-		if (newList.size()==1) {
-			Integer sId = newList.get(0);//sId為物件而非引索
+		// List<Integer> validStores= newlist.isEmpty() ? new ArrayList<>() :
+		// storesSrerchDao.exsitStores(newlist);
+		// 單數字>> 沒有>>新增 有>>刪除
+		if (newList.size() == 1) {
+			Integer sId = newList.get(0);// sId為物件而非引索
 			List<Integer> oldList = new ArrayList<>(getFavoriteStores(id));
 			List<Integer> validTarget = storesSrerchDao.exsitStores(Collections.singletonList(sId));
 			if (!validTarget.isEmpty()) {
-	            if (oldList.contains(sId)) {
-	            	oldList.remove(sId); // 存在則刪除（取消收藏）
-	            } else {
-	            	oldList.add(sId);    // 不存在則新增（加入收藏）
-	            }
-	        }
-	        finalToSave = oldList;
+				if (oldList.contains(sId)) {
+					oldList.remove(sId); // 存在則刪除（取消收藏）
+				} else {
+					oldList.add(sId); // 不存在則新增（加入收藏）
+				}
+			}
+			finalToSave = oldList;
 		}
-		//陣列>>直接蓋
+		// 陣列>>直接蓋
 		else {
-			finalToSave = newList.isEmpty() ? new ArrayList<>() 
-                    : storesSrerchDao.exsitStores(newList);
+			finalToSave = newList.isEmpty() ? new ArrayList<>()
+					: storesSrerchDao.exsitStores(newList);
 		}
 
-		//		Collections.sort(validStores);
+		// Collections.sort(validStores);
 		String storesString = finalToSave.stream()
-				.sorted()//排序
-                .map(String::valueOf)
-                .collect(Collectors.joining(",","[","]"));
+				.sorted()// 排序
+				.map(String::valueOf)
+				.collect(Collectors.joining(",", "[", "]"));
 		try {
 			int done = userDao.updateFavoriteStores(id, storesString);
-			if (done>0) {
-				return new BasicRes(200,"成功更新最愛店家喵");
+			if (done > 0) {
+				return new BasicRes(200, "成功更新最愛店家喵");
+			} else {
+				return new BasicRes(404, "使用者不存在喵");
 			}
-			else {
-				return new BasicRes(404,"使用者不存在喵");
-			}
-		}
-		catch(Exception e){
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("資料更新失敗喵", e);
 		}
-}
+	}
 
-	//查詢最愛店家
-	public List<Integer> getFavoriteStores(String id){
-//		List<Integer> favoriteStoresList = new ArrayList<>();
+	// 查詢最愛店家
+	public List<Integer> getFavoriteStores(String id) {
+		// List<Integer> favoriteStoresList = new ArrayList<>();
 		String listStr = "";
 		try {
-			listStr = userDao.getFavoriteStoresById(id);			
-		}
-		catch(Exception e){
+			listStr = userDao.getFavoriteStoresById(id);
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("好像沒有這個使用者喵!", e);
 		}
 		if (StringUtils.hasText(listStr) && !listStr.equals("[]")) {
 			return Arrays.stream(listStr.replace("[", "").replace("]", "").split(","))
-			.map(String::trim)		//去空格
-			.filter(s -> !s.isEmpty())  //去空字串
-			.map(Integer::parseInt)  //轉數字
-			.collect(Collectors.toCollection(ArrayList::new));	//	變成List
+					.map(String::trim) // 去空格
+					.filter(s -> !s.isEmpty()) // 去空字串
+					.map(Integer::parseInt) // 轉數字
+					.collect(Collectors.toCollection(ArrayList::new)); // 變成List
 		}
 		return new ArrayList<>();
 	}

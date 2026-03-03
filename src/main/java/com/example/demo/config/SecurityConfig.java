@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -33,10 +34,13 @@ public class SecurityConfig {
 	@Autowired
 	private UserDao userDao;
 
+	@Value("${app.frontend.url}")
+	private String frontendUrl;
+
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:4200")); // Angular 端口
+		config.setAllowedOrigins(List.of("http://localhost:4200", frontendUrl)); // Angular 端口
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true); // 允許攜帶 Cookie (JSESSIONID)
@@ -79,7 +83,7 @@ public class SecurityConfig {
 							request.getSession().setAttribute("account", email);
 						}
 
-						response.sendRedirect("http://localhost:4200/auth-callback");
+						response.sendRedirect(frontendUrl + "/auth-callback");
 					});
 
 					// 登入失敗處理：將錯誤訊息編碼後傳回前端
@@ -104,10 +108,10 @@ public class SecurityConfig {
 						if (errorMessage.contains("Account created")) {
 							String encodedMsg = URLEncoder.encode("註冊成功，已發送驗證信至您的信箱", StandardCharsets.UTF_8);
 							response.sendRedirect(
-									"http://localhost:4200/gogobuy/login?verificationSent=true&message=" + encodedMsg);
+									frontendUrl + "/gogobuy/login?verificationSent=true&message=" + encodedMsg);
 						} else {
 							String encodedMsg = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
-							response.sendRedirect("http://localhost:4200/gogobuy/login?errorMsg=" + encodedMsg);
+							response.sendRedirect(frontendUrl + "/gogobuy/login?errorMsg=" + encodedMsg);
 						}
 					});
 				})
@@ -115,7 +119,7 @@ public class SecurityConfig {
 				// 3. 登出區塊
 				.logout(logout -> {
 					// 登出成功後同樣跳回前端首頁
-					logout.logoutSuccessUrl("http://localhost:4200");
+					logout.logoutSuccessUrl(frontendUrl);
 					// 順便清除 Session 和 Cookie，確保登出乾淨
 					// JSESSIONID : Java Web 容器在使用者第一次訪問時自動產生的 Cookie
 					logout.invalidateHttpSession(true);
