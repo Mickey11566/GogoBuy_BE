@@ -4,12 +4,13 @@ public enum PaymentStatus {
 
 	UNPAID("未付費"),
 	PAID("已付費"),
-	CONFIRMED("已確認");
-	
+	CONFIRMED("已確認"),
+	SUBMITTED("待結單");
+
 	private String message;
 
-	PaymentStatus(String string) {
-		// TODO Auto-generated constructor stub
+	PaymentStatus(String message) {
+		this.message = message;
 	}
 
 	public String getMessage() {
@@ -19,6 +20,5 @@ public enum PaymentStatus {
 	public void setMessage(String message) {
 		this.message = message;
 	}
-	
-	
+
 }

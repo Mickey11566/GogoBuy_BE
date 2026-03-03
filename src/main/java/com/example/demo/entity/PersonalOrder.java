@@ -80,6 +80,17 @@ public class PersonalOrder {
 	}
 
 	@Transient
+	private String userPhone;
+
+	public String getUserPhone() {
+		return userPhone;
+	}
+
+	public void setUserPhone(String userPhone) {
+		this.userPhone = userPhone;
+	}
+
+	@Transient
 	private PickupStatusEnum pickupStatus;
 
 	public PickupStatusEnum getPickupStatus() {

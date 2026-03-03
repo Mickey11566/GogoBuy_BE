@@ -59,15 +59,24 @@ public class PersonalOrderService {
 			// 引用 service 的 addSalesVolume
 			salesStatsService.addSalesVolume(storeId, menuId, quantity);
 		}
-		PersonalOrder addpo = new PersonalOrder();
-		addpo.setEventsId(req.getEventsId());
-		addpo.setUserId(req.getUserId());
-		addpo.setTotalSum(req.getTotalSum());
-		addpo.setTotalWeight(req.getTotalWeight());
-		addpo.setPersonFee(req.getPersonFee());
-		addpo.setPaymentStatus(PaymentStatus.UNPAID);
 
-		personalOrderDao.save(addpo);
+		// 檢查是否已存在結算單 (避免與成員預先確認產生的資料重複)
+		PersonalOrder po = personalOrderDao.findByEventsIdAndUserId(req.getEventsId(), req.getUserId());
+		if (po == null) {
+			po = new PersonalOrder();
+			po.setEventsId(req.getEventsId());
+			po.setUserId(req.getUserId());
+			po.setPaymentStatus(PaymentStatus.UNPAID);
+		} else if (po.getPaymentStatus() == PaymentStatus.SUBMITTED) {
+			// 如果本來是「待結單」，結團後就正式轉為「未付費」(包含運費)
+			po.setPaymentStatus(PaymentStatus.UNPAID);
+		}
+
+		po.setTotalSum(req.getTotalSum());
+		po.setTotalWeight(req.getTotalWeight());
+		po.setPersonFee(req.getPersonFee());
+
+		personalOrderDao.save(po);
 	}
 
 	// 更新結單狀態
@@ -137,9 +146,9 @@ public class PersonalOrderService {
 				order.setPersonFee(0); // 運費預設為0，結單時會再計算
 			}
 
-			// 狀態更新為已確認
-			order.setPaymentStatus(PaymentStatus.CONFIRMED);
-			order.setPaymentTime(LocalDateTime.now());
+			// 狀態更新為「待結單」(待團長結算發帳單)
+			order.setPaymentStatus(PaymentStatus.SUBMITTED);
+			// 尚未付款，所以不設定 PaymentTime
 
 			personalOrderDao.save(order);
 			return new PersonalOrdersRes(200, "訂單確認成功");
@@ -222,6 +231,7 @@ public class PersonalOrderService {
 						po.setUserNickname(user.getNickname());
 						po.setUserAvatar(user.getAvatarUrl());
 						po.setUserEmail(user.getEmail());
+						po.setUserPhone(user.getPhone());
 					}
 
 					// 取餐狀態 (從 orders 表抓取該用戶的狀態)
