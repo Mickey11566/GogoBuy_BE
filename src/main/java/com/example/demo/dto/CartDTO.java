@@ -1,5 +1,6 @@
 package com.example.demo.dto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.example.demo.constants.GroupbuyStatusEnum;
@@ -19,6 +20,7 @@ public class CartDTO {
 	private boolean canModify; // 根據 status 判斷是否還能修改
 	private String pickLocation;
 	private String pickupTime;
+	private LocalDateTime endTime;
 
 	// 統計資訊 (管理用)
 	private int unpaidCount;
@@ -147,4 +149,13 @@ public class CartDTO {
 		this.pickupTime = pickupTime;
 	}
 
+	public LocalDateTime getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(LocalDateTime localDateTime) {
+		this.endTime = localDateTime;
+	}
+
+	
 }

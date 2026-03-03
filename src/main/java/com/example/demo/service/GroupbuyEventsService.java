@@ -704,6 +704,7 @@ public class GroupbuyEventsService {
 				dto.setStatus(view.getEventStatus());
 				dto.setPickLocation(view.getPickLocation());
 				dto.setPickupTime(view.getPickupTime() != null ? view.getPickupTime().toString() : "尚未設定");
+				dto.setEndTime(view.getEndTime());
 
 				// 權限：團長只要沒結單都能改；團員只有 OPEN 能改
 				boolean canModify = isHost ? !"FINISHED".equals(view.getEventStatus().toString())
