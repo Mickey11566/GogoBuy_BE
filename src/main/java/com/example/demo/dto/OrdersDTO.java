@@ -2,19 +2,22 @@ package com.example.demo.dto;
 
 import java.util.List;
 
+import com.example.demo.constants.PaymentStatus;
 import com.example.demo.vo.OrderMenuVo;
 
 public class OrdersDTO {
-	
+
 	private int eventsId;
-	
+
 	private String userId;
 
 	private List<OrderMenuVo> menuList;
-	
+
 	private String personalMemo;
 
 	private double weight;
+
+	private PaymentStatus paymentStatus;
 
 	public int getEventsId() {
 		return eventsId;
@@ -56,5 +59,12 @@ public class OrdersDTO {
 		this.weight = weight;
 	}
 
-	
+	public PaymentStatus getPaymentStatus() {
+		return paymentStatus;
+	}
+
+	public void setPaymentStatus(PaymentStatus paymentStatus) {
+		this.paymentStatus = paymentStatus;
+	}
+
 }
