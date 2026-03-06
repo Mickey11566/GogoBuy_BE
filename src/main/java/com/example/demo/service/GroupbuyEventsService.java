@@ -71,7 +71,6 @@ public class GroupbuyEventsService {
 
 	@Autowired
 	private MessagesService messagesService;
-	
 
 	ObjectMapper mapper = new ObjectMapper();
 
@@ -314,26 +313,30 @@ public class GroupbuyEventsService {
 
 			// 通知所有成員 (包含站內與 email)
 			List<String> members = ordersDao.getUserIdByEventsId(id);
-			System.out.println("Processing event update notification for event " + id + ". Found members: " + (members != null ? members : "null"));
+			System.out.println("Processing event update notification for event " + id + ". Found members: "
+					+ (members != null ? members : "null"));
 			if (!CollectionUtils.isEmpty(members)) {
 				try {
 					List<UserNotificationVo> recipients = members.stream()
-						.filter(uid -> !uid.equals(req.getHostId()))
-						.distinct()
-						.map(uid -> {
-							UserNotificationVo vo = new UserNotificationVo();
-							vo.setUserId(uid);
-							User u = userDao.getUserById(uid);
-							if (u != null) vo.setEmail(u.getEmail());
-							return vo;
-						}).collect(Collectors.toList());
+							.filter(uid -> !uid.equals(req.getHostId()))
+							.distinct()
+							.map(uid -> {
+								UserNotificationVo vo = new UserNotificationVo();
+								vo.setUserId(uid);
+								User u = userDao.getUserById(uid);
+								if (u != null)
+									vo.setEmail(u.getEmail());
+								return vo;
+							}).collect(Collectors.toList());
 
-					System.out.println("Sending event update notification to " + recipients.size() + " recipients (excl. host).");
+					System.out.println(
+							"Sending event update notification to " + recipients.size() + " recipients (excl. host).");
 					if (!recipients.isEmpty()) {
 						NotifiMesReq notifyReq = new NotifiMesReq();
 						notifyReq.setCategory(NotifiCategoryEnum.GROUP_BUY);
 						notifyReq.setTitle("團購資訊已更新");
-						notifyReq.setContent("您參加的團購「" + req.getEventName() + "」資訊已由團長更新。內容包含截止時間、取貨地點或商品菜單可能有變動，請點擊查看詳情。");
+						notifyReq.setContent(
+								"您參加的團購「" + req.getEventName() + "」資訊已由團長更新。內容包含截止時間、取貨地點或商品菜單可能有變動，請點擊查看詳情。");
 						notifyReq.setTargetUrl("/groupbuy-event/group-follow/" + id);
 						notifyReq.setUserId(req.getHostId()); // 發布者(團長)
 						notifyReq.setEventId(id);
@@ -374,14 +377,14 @@ public class GroupbuyEventsService {
 	public BasicRes closeEvent(int id, String userId) {
 		GroupbuyEvents event = groupbuyEventsDao.findById(id);
 		if (event == null) {
-	        return new BasicRes(404, "找不到該團購活動");
-	    }
+			return new BasicRes(404, "找不到該團購活動");
+		}
 		// 判斷成團門檻 (未成團邏輯)
 		if (event.getTotalOrderAmount() < event.getLimitation()) {
-	        fakeDelete(id);
-	        groupbuyEventsDao.updateStatus(GroupbuyStatusEnum.CANCELLED.name(), id, userId);
-	        return new BasicRes(200, "人數不足，已自動取消該團");
-	    }
+			fakeDelete(id);
+			groupbuyEventsDao.updateStatus(GroupbuyStatusEnum.CANCELLED.name(), id, userId);
+			return new BasicRes(200, "人數不足，已自動取消該團");
+		}
 		// 更新活動狀態為 FINISHED
 		groupbuyEventsDao.updateStatus(GroupbuyStatusEnum.FINISHED.name(), id, userId);
 		List<String> userIdList = ordersDao.getUserIdByEventsId(id);
@@ -412,7 +415,7 @@ public class GroupbuyEventsService {
 			try {
 				List<String> memberIds = ordersDao.getUserIdByEventsId(id);
 				memberIds.remove(userId); // 排除團長自己
-				
+
 				if (!memberIds.isEmpty()) {
 					NotifiMesReq notifyReq = new NotifiMesReq();
 					notifyReq.setCategory(NotifiCategoryEnum.GROUP_BUY);
@@ -422,11 +425,11 @@ public class GroupbuyEventsService {
 					notifyReq.setUserId(userId);
 					notifyReq.setEventId(id);
 					notifyReq.setExpiredAt(LocalDate.now().plusDays(30).toString());
-					
+
 					notifyReq.setUserNotificationVoList(memberIds.stream().map(mid -> {
 						UserNotificationVo vo = new UserNotificationVo();
 						vo.setUserId(mid);
-						// 這裡需要 email 嗎？ 
+						// 這裡需要 email 嗎？
 						// MessagesService.create 會在發送時根據 userId 去查 email 嗎？
 						// 剛才我在 MessagesService.create 看到它是從 vo 拿 email。
 						// 所以我得先拿到 email。
@@ -524,10 +527,10 @@ public class GroupbuyEventsService {
 		}
 	}
 
-	// 回傳全部開團的
+	// 回傳全部開團的 (包含已結束，供後台管理使用)
 	public GroupbuyEventsRes getAll() {
 		try {
-			List<GroupbuyEventsProjection> list = groupbuyEventsDao.getAllEvent();
+			List<GroupbuyEventsProjection> list = groupbuyEventsDao.getAll();
 			if (list == null) {
 				return new GroupbuyEventsRes(400, "目前暫無任何開團資料");
 			}
@@ -593,7 +596,7 @@ public class GroupbuyEventsService {
 		}
 		return new BasicRes(500, "刪除活動失敗，請稍後再試");
 	}
-	
+
 	// 軟刪除
 	@Transactional
 	public BasicRes fakeDelete(int eventsId) {

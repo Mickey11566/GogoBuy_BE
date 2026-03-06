@@ -76,7 +76,7 @@ public class UserService {
 		String password = req.getPassword();
 		String name = req.getNickname();
 		String phone = req.getPhone();
-		String status = UserStatusEnum.PENDING_ACTIVE.name();
+		String status = "pending_active"; // 使用小寫以確保與登入邏輯一致
 		int res = userDao.addUser(uniqueID, email, encoder.encode(password), name, phone, status);
 		if (res == 1) {
 			// 發送開通驗證信
@@ -96,8 +96,9 @@ public class UserService {
 		// 生成 JWT Token
 		String token = jwtService.createActivationToken(userId);
 
-		// 生成開通連結 (以前端 Angular 跑在 4200 port)
-		String activationUrl = frontendUrl + "/active-account?token=" + token + "\n\n連結將於1小時後失效。";
+		// 生成開通連結
+		String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+		String activationUrl = baseUrl + "active-account?token=" + token;
 
 		try {
 			// 執行發送郵件
@@ -105,7 +106,7 @@ public class UserService {
 			message.setFrom("GogobuyAdmin@gmail.com");
 			message.setTo(email);
 			message.setSubject("[GoGoBuy] 帳號開通驗證");
-			message.setText("您好：\n\n請點選以下網址開通：" + activationUrl);
+			message.setText("您好：\n\n請點選以下網址開通：" + activationUrl + "\n\n連結將於1小時後失效。");
 			mailSender.send(message);
 
 			// 測試用
@@ -123,8 +124,8 @@ public class UserService {
 		String userId = jwtService.parseActivationToken(token);
 
 		if (userId != null && !userId.isEmpty()) {
-			// 直接去資料庫更新該 UUID 的狀態
-			int rows = userDao.updateStatus(userId, "ACTIVE");
+			// 直接去資料庫更新該 UUID 的狀態，使用小寫 "active"
+			int rows = userDao.updateStatus(userId, "active");
 			return rows > 0;
 		}
 		return false;
@@ -187,7 +188,8 @@ public class UserService {
 			}
 		}
 
-		switch (user.getStatus()) {
+		String status = user.getStatus() != null ? user.getStatus().toLowerCase() : "";
+		switch (status) {
 			case "pending_active":
 				return new LoginRes(ResMessage.PENDING_ACTIVE.getCode(), ResMessage.PENDING_ACTIVE.getMessage());
 			case "self_suspended":
@@ -196,7 +198,7 @@ public class UserService {
 				return new LoginRes(ResMessage.SUCCESS.getCode(), //
 						ResMessage.SUCCESS.getMessage(), user.getId());
 			default:
-				return new LoginRes(500, "未知狀態");
+				return new LoginRes(500, "未知狀態：" + status);
 		}
 	}
 
@@ -522,8 +524,7 @@ public class UserService {
 	// 信箱開通驗證
 	public boolean verifyEmail(String email) {
 		User user = userDao.getUserByEmail(email);
-		if (user != null && user.getStatus() == UserStatusEnum.PENDING_ACTIVE.getStatus()) {
-
+		if (user != null && "pending_active".equalsIgnoreCase(user.getStatus())) {
 			return true;
 		}
 		return false;

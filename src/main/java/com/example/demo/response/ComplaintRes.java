@@ -1,27 +1,28 @@
 package com.example.demo.response;
 
-import java.util.List;
-
 import com.example.demo.vo.ComplaintVo;
 
 public class ComplaintRes extends BasicRes {
-	private List<ComplaintVo> vo;
+	private ComplaintVo vo;
 
 	public ComplaintRes() {
 		super();
 	}
+
 	public ComplaintRes(int code, String message) {
 		super(code, message);
 	}
-	
-	public ComplaintRes(int code, String message, List<ComplaintVo> vo) {
+
+	public ComplaintRes(int code, String message, ComplaintVo vo) {
 		super(code, message);
 		this.vo = vo;
 	}
-	public List<ComplaintVo> getVo() {
+
+	public ComplaintVo getVo() {
 		return vo;
 	}
-	public void setVo(List<ComplaintVo> vo) {
+
+	public void setVo(ComplaintVo vo) {
 		this.vo = vo;
 	}
 }

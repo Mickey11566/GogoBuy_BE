@@ -1,11 +1,6 @@
 package com.example.demo.service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,7 +10,6 @@ import com.example.demo.dao.ComplaintDao;
 import com.example.demo.dao.UserDao;
 import com.example.demo.entity.Complaint;
 import com.example.demo.entity.User;
-import com.example.demo.entity.UserInfo;
 import com.example.demo.request.ComplaintReq;
 import com.example.demo.response.BasicRes;
 import com.example.demo.response.ComplaintRes;
