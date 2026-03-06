@@ -1,6 +1,11 @@
 package com.example.demo.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -10,6 +15,7 @@ import com.example.demo.dao.ComplaintDao;
 import com.example.demo.dao.UserDao;
 import com.example.demo.entity.Complaint;
 import com.example.demo.entity.User;
+import com.example.demo.entity.UserInfo;
 import com.example.demo.request.ComplaintReq;
 import com.example.demo.response.BasicRes;
 import com.example.demo.response.ComplaintRes;
@@ -25,6 +31,10 @@ public class ComplaintService {
 	private UserDao userDao;
 
 	public BasicRes addComplaint(ComplaintReq req) {
+		List<Integer> allEventId = complaintDao.getAllEventsId();
+		if (!allEventId.contains(req.getEventId())) {
+			return new BasicRes(ResMessage.EVENTS_NOT_FOUND.getCode(), ResMessage.EVENTS_NOT_FOUND.getMessage());
+		}
 		complaintDao.addComplaint(req.getComplaintUuid(), req.getRespondentUuid(), req.getReason(), req.getEventId());
 		return new BasicRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage());
 	}

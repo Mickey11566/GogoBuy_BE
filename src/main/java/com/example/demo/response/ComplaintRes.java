@@ -1,9 +1,11 @@
 package com.example.demo.response;
 
+import java.util.List;
+
 import com.example.demo.vo.ComplaintVo;
 
 public class ComplaintRes extends BasicRes {
-	private ComplaintVo complaintData;
+	private List<ComplaintVo> vo;
 
 	public ComplaintRes() {
 		super();
@@ -12,14 +14,14 @@ public class ComplaintRes extends BasicRes {
 		super(code, message);
 	}
 	
-	public ComplaintRes(int code, String message, ComplaintVo complaintData) {
+	public ComplaintRes(int code, String message, List<ComplaintVo> vo) {
 		super(code, message);
-		this.complaintData = complaintData;
+		this.vo = vo;
 	}
-	public ComplaintVo getComplaintData() {
-		return complaintData;
+	public List<ComplaintVo> getVo() {
+		return vo;
 	}
-	public void setComplaintData(ComplaintVo complaintData) {
-		this.complaintData = complaintData;
+	public void setVo(List<ComplaintVo> vo) {
+		this.vo = vo;
 	}
 }
