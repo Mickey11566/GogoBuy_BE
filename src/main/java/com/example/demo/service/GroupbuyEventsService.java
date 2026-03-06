@@ -16,6 +16,7 @@ import com.example.demo.constants.NotifiCategoryEnum;
 import com.example.demo.request.NotifiMesReq;
 import com.example.demo.vo.UserNotificationVo;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.example.demo.constants.GroupbuyStatusEnum;
 import com.example.demo.constants.PaymentStatus;
@@ -381,10 +382,11 @@ public class GroupbuyEventsService {
 		}
 		// 判斷成團門檻 (未成團邏輯)
 		if (event.getTotalOrderAmount() < event.getLimitation()) {
-			fakeDelete(id);
 			groupbuyEventsDao.updateStatus(GroupbuyStatusEnum.CANCELLED.name(), id, userId);
-			return new BasicRes(200, "人數不足，已自動取消該團");
+			fakeDelete(id);
+			return new BasicRes(200, "金額不足，已自動取消該團");
 		}
+
 		// 更新活動狀態為 FINISHED
 		groupbuyEventsDao.updateStatus(GroupbuyStatusEnum.FINISHED.name(), id, userId);
 		List<String> userIdList = ordersDao.getUserIdByEventsId(id);
@@ -450,13 +452,6 @@ public class GroupbuyEventsService {
 		} else {
 			return new BasicRes(400, "帳單已產生但運費計算出錯：" + feeRes.getMessage());
 		}
-	}
-
-	// 排程結單
-	@Transactional
-	public BasicRes autoCloseEvent(int id, String userId) {
-		BasicRes autoClose = closeEvent(id, userId);
-		return autoClose;
 	}
 
 	// 回傳開團者的開團紀錄
