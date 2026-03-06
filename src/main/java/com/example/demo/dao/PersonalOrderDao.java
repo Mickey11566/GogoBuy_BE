@@ -34,22 +34,38 @@ public interface PersonalOrderDao extends JpaRepository<PersonalOrder, Integer> 
 	@Query(value = "select * from personal_order where events_id = ?1 and user_id = ?2 limit 1", nativeQuery = true)
 	public PersonalOrder findByEventsIdAndUserId(int eventsId, String userId);
 
-	// 查詢 eventsId 相同的 userId
-	@Query(value = "select * from personal_order where events_id = ?1", nativeQuery = true)
+	// 取得該團所有人的結算單 (排除已刪除訂單的用戶)
+	@Query(value = "SELECT p.* FROM personal_order p " +
+			"WHERE p.events_id = ?1 " +
+			"AND EXISTS (SELECT 1 FROM orders o " +
+			"            WHERE o.user_id = p.user_id " +
+			"            AND o.events_id = p.events_id " +
+			"            AND o.is_deleted = false)", nativeQuery = true)
 	public List<PersonalOrder> findUserIdByEventsId(int eventsId);
 
-	// 統計該團未付款人數 (排除已收訖或已付款)
-	@Query(value = "select count(*) from personal_order where events_id = ?1 and payment_status not in ('PAID', 'CONFIRMED')", nativeQuery = true)
+	// 統計該團未付款人數 (排除已收訖或已付款，且必須有有效訂單)
+	@Query(value = "SELECT COUNT(*) FROM personal_order p " +
+			"WHERE p.events_id = ?1 " +
+			"AND p.payment_status NOT IN ('PAID', 'CONFIRMED') " +
+			"AND EXISTS (SELECT 1 FROM orders o " +
+			"            WHERE o.user_id = p.user_id " +
+			"            AND o.events_id = p.events_id " +
+			"            AND o.is_deleted = false)", nativeQuery = true)
 	public int countUnpaidByEventsId(int eventId);
 
-    
-    // 查詢 eventId 跟 userId 的結單
-    @Query(value ="select * from personal_order where events_id = ?1 and user_id = ?2", nativeQuery = true)
-    public PersonalOrder findByEventsId(int eventId, String userId);
-    
-    // (已付款過) 更新 PaymentStatus 和 PaymentTime
-    @Transactional 
-    @Modifying
-    @Query(value = " update personal_order set payment_status ='PAID' , payment_time = now() where events_id = ?1 and user_id = ?2", nativeQuery = true)
-    public int updatePaymentStatusAndPaymentTime( int eventId, String userId);
+	// 查詢 eventId 跟 userId 的結單
+	@Query(value = "select * from personal_order where events_id = ?1 and user_id = ?2", nativeQuery = true)
+	public PersonalOrder findByEventsId(int eventId, String userId);
+
+	// (已付款過) 更新 PaymentStatus 和 PaymentTime
+	@Transactional
+	@Modifying
+	@Query(value = " update personal_order set payment_status ='PAID' , payment_time = now() where events_id = ?1 and user_id = ?2", nativeQuery = true)
+	public int updatePaymentStatusAndPaymentTime(int eventId, String userId);
+
+	// 刪除特定結算單
+	@Transactional
+	@Modifying
+	@Query(value = "DELETE FROM personal_order WHERE events_id = ?1 AND user_id = ?2", nativeQuery = true)
+	public int deleteByEventsIdAndUserId(int eventId, String userId);
 }

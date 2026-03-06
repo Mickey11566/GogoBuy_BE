@@ -94,6 +94,12 @@ public class User {
 	@Column(name = "otp_expiry")
 	private LocalDateTime otpExpiry;
 
+	@Column(name = "banned_until")
+	private LocalDateTime bannedUntil;
+
+	@Column(name = "ban_reason")
+	private String banReason;
+
 	public String getOtpCode() {
 		return otpCode;
 	}
@@ -108,6 +114,22 @@ public class User {
 
 	public void setOtpExpiry(LocalDateTime otpExpiry) {
 		this.otpExpiry = otpExpiry;
+	}
+
+	public LocalDateTime getBannedUntil() {
+		return bannedUntil;
+	}
+
+	public void setBannedUntil(LocalDateTime bannedUntil) {
+		this.bannedUntil = bannedUntil;
+	}
+
+	public String getBanReason() {
+		return banReason;
+	}
+
+	public void setBanReason(String banReason) {
+		this.banReason = banReason;
 	}
 
 	public String getId() {

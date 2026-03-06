@@ -13,47 +13,66 @@ import com.example.demo.entity.User;
 import com.example.demo.request.ComplaintReq;
 import com.example.demo.response.BasicRes;
 import com.example.demo.response.ComplaintRes;
+import com.example.demo.response.GetComplaintListRes;
 import com.example.demo.vo.ComplaintVo;
 
 @Service
 public class ComplaintService {
-	
+
 	@Autowired
 	private ComplaintDao complaintDao;
 	@Autowired
 	private UserDao userDao;
-	
+
 	public BasicRes addComplaint(ComplaintReq req) {
 		complaintDao.addComplaint(req.getComplaintUuid(), req.getRespondentUuid(), req.getReason(), req.getEventId());
 		return new BasicRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage());
 	}
-	
+
 	public ComplaintRes getComplaint(int id) {
-		List<Integer> allComplaintId=complaintDao.getAllComplaintId();
+		List<Integer> allComplaintId = complaintDao.getAllComplaintId();
 		if (!allComplaintId.contains(id)) {
-		    return new ComplaintRes(ResMessage.COMPLAINT_ID_NOT_FOUND.getCode(), ResMessage.COMPLAINT_ID_NOT_FOUND.getMessage());
+			return new ComplaintRes(ResMessage.COMPLAINT_ID_NOT_FOUND.getCode(),
+					ResMessage.COMPLAINT_ID_NOT_FOUND.getMessage());
 		}
-		Complaint complaintData= complaintDao.getComplaint(id);
-		ComplaintVo vo= new ComplaintVo();
-		vo.setComplaintUserName(userDao.getUserById(complaintData.getComplaintUuid()).getNickname());
-		vo.setRespondentUserName(userDao.getUserById(complaintData.getRespondentUuid()).getNickname());
-		vo.setReason(complaintData.getReason());
+		Complaint complaintData = complaintDao.getComplaint(id);
+		ComplaintVo vo = convertToVo(complaintData);
 		return new ComplaintRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage(), vo);
 	}
-	
+
+	public GetComplaintListRes getAllComplaints() {
+		List<Complaint> complaints = complaintDao.getAllComplaints();
+		List<ComplaintVo> voList = complaints.stream().map(this::convertToVo).toList();
+		return new GetComplaintListRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage(), voList);
+	}
+
+	private ComplaintVo convertToVo(Complaint complaint) {
+		ComplaintVo vo = new ComplaintVo();
+		vo.setId(complaint.getId());
+
+		User complainant = userDao.getUserById(complaint.getComplaintUuid());
+		vo.setComplaintUserName(
+				complainant != null ? complainant.getNickname() : "未知用戶 (" + complaint.getComplaintUuid() + ")");
+
+		User respondent = userDao.getUserById(complaint.getRespondentUuid());
+		vo.setRespondentUserName(
+				respondent != null ? respondent.getNickname() : "未知用戶 (" + complaint.getRespondentUuid() + ")");
+
+		vo.setReason(complaint.getReason());
+		vo.setEventId(complaint.getEventId());
+		vo.setCompleted(complaint.isCompleted());
+		return vo;
+	}
+
 	public BasicRes finishComplaint(int id) {
-		List<Integer> allComplaintId=complaintDao.getAllComplaintId();
-		if (!allComplaintId.contains(id)) {
-		    return new BasicRes(ResMessage.COMPLAINT_ID_NOT_FOUND.getCode(), ResMessage.COMPLAINT_ID_NOT_FOUND.getMessage());
+		Complaint complaint = complaintDao.findById(id).orElse(null);
+		if (complaint == null) {
+			return new BasicRes(ResMessage.COMPLAINT_ID_NOT_FOUND.getCode(),
+					ResMessage.COMPLAINT_ID_NOT_FOUND.getMessage());
 		}
-		Integer completed=complaintDao.checkFinishOrNot(id);
-		if(completed==1) {
-			complaintDao.finishComplaint(id, 0);		
-			return new BasicRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage());
-		}else {
-			complaintDao.finishComplaint(id, 1);		
-			return new BasicRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage());
-		}
-		
+
+		complaint.setCompleted(!complaint.isCompleted());
+		complaintDao.save(complaint);
+		return new BasicRes(ResMessage.SUCCESS.getCode(), ResMessage.SUCCESS.getMessage());
 	}
 }

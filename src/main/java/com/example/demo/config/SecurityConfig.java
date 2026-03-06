@@ -40,7 +40,12 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:4200", frontendUrl)); // Angular 端口
+		config.setAllowedOrigins(List.of("http://localhost:4200", "http://127.0.0.1:4200", "https://*.ts.net:*", // 允許所有
+																													// Tailscale
+																													// 網域與任何連接埠
+				"https://gogobuy.netlify.app/", // 你的 Render 前端網址
+				frontendUrl // 保留原本從 properties 讀取的設定
+		)); // Angular 端口
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true); // 允許攜帶 Cookie (JSESSIONID)
@@ -72,8 +77,7 @@ public class SecurityConfig {
 
 					// 登入成功後的處理: 設定 Session 並跳轉
 					oauth2.successHandler((request, response, authentication) -> {
-						OAuth2User oauthUser = (OAuth2User) authentication
-								.getPrincipal();
+						OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
 						String email = oauthUser.getAttribute("email");
 						User user = userDao.getUserByEmail(email);
 
@@ -81,6 +85,22 @@ public class SecurityConfig {
 							// 設定 currentUserId 以便攔截器檢查狀態
 							request.getSession().setAttribute("currentUserId", user.getId());
 							request.getSession().setAttribute("account", email);
+						}
+
+						// 動態獲取來源。如果前端有傳入 Referer 或特定 Header，可以從那裡抓
+						// 或者最簡單的方法：根據目前 Request 的 Host 來判斷要跳轉去哪裡
+						String origin = request.getHeader("Referer");
+						String redirectBase = (origin != null && !origin.isEmpty()) ? origin.split("/#/")[0]
+								: frontendUrl;
+
+						// 如果想要更精確，可以判斷 request.getServerName() 是否包含 .ts.net
+						if (request.getServerName().endsWith(".ts.net")) {
+							redirectBase = "https://" + request.getServerName() + ":8443"; // 假設前端掛在 8443
+						}
+
+						// 確保最後路徑正確 (避免重複的 /)
+						if (redirectBase.endsWith("/")) {
+							redirectBase = redirectBase.substring(0, redirectBase.length() - 1);
 						}
 
 						response.sendRedirect(frontendUrl + "/auth-callback");
@@ -92,8 +112,7 @@ public class SecurityConfig {
 
 						// 嘗試從 OAuth2AuthenticationException 取得詳細描述
 						if (exception instanceof OAuth2AuthenticationException) {
-							OAuth2Error error = ((OAuth2AuthenticationException) exception)
-									.getError();
+							OAuth2Error error = ((OAuth2AuthenticationException) exception).getError();
 							if (error != null && error.getDescription() != null) {
 								errorMessage = error.getDescription();
 							}

@@ -141,8 +141,12 @@ public class UserService {
 	}
 
 	// 管理員停權
-	public BasicRes adminBan(String id) {
-		userDao.updateStatus(id, "banned");
+	public BasicRes adminBan(String id, Integer hours, String reason) {
+		LocalDateTime bannedUntil = null;
+		if (hours != null && hours > 0) {
+			bannedUntil = LocalDateTime.now().plusHours(hours);
+		}
+		userDao.banUser(id, bannedUntil, reason);
 		return new BasicRes(ResMessage.SUCCESS.getCode(), //
 				ResMessage.SUCCESS.getMessage());
 	}
@@ -168,11 +172,24 @@ public class UserService {
 		}
 
 		// 核心狀態檢查
+		if ("banned".equals(user.getStatus())) {
+			if (user.getBannedUntil() != null && LocalDateTime.now().isAfter(user.getBannedUntil())) {
+				// 禁用期限已過 -> 自動恢復
+				user.setStatus("active");
+				user.setBannedUntil(null);
+				user.setBanReason(null);
+				userDao.save(user);
+			} else {
+				String reasonMsg = StringUtils.hasText(user.getBanReason()) ? "理由: " + user.getBanReason() : "無特定理由";
+				String untilMsg = user.getBannedUntil() != null ? "禁用至: " + user.getBannedUntil().toString() : "永久禁用";
+				return new LoginRes(ResMessage.BANNED.getCode(),
+						ResMessage.BANNED.getMessage() + " (" + untilMsg + ", " + reasonMsg + ")");
+			}
+		}
+
 		switch (user.getStatus()) {
 			case "pending_active":
 				return new LoginRes(ResMessage.PENDING_ACTIVE.getCode(), ResMessage.PENDING_ACTIVE.getMessage());
-			case "banned":
-				return new LoginRes(ResMessage.BANNED.getCode(), ResMessage.BANNED.getMessage());
 			case "self_suspended":
 				return new LoginRes(ResMessage.SELF_SUSPENDED.getCode(), ResMessage.SELF_SUSPENDED.getMessage());
 			case "active":
@@ -441,6 +458,16 @@ public class UserService {
 		System.out.println("清理完成，共影響了 " + updatedRows + " 筆資料。");
 	}
 
+	// 每分鐘檢查一次是否有過期的禁用
+	@Scheduled(cron = "0 * * * * ?")
+	@Transactional
+	public void autoRestoreExpiredBansJob() {
+		int count = userDao.autoRestoreBannedUsers(LocalDateTime.now());
+		if (count > 0) {
+			System.out.println("自動恢復了 " + count + " 個已到期的禁用帳戶");
+		}
+	}
+
 	/*
 	 * Redis功能區塊 暫時用不到 // 驗證並更新 Email
 	 * 
@@ -520,14 +547,16 @@ public class UserService {
 		return new BasicRes(ResMessage.SUCCESS.getCode(), "驗證信已重新發送，請檢查您的信箱。");
 	}
 
-	// 管理員恢復帳號
 	public BasicRes activeUserAdmin(String id) {
 		User user = userDao.getUserById(id);
 		if (user == null) {
 			return new BasicRes(ResMessage.USER_NOT_FOUND.getCode(), ResMessage.USER_NOT_FOUND.getMessage());
 		}
 
-		userDao.updateStatus(id, "active");
+		user.setStatus("active");
+		user.setBannedUntil(null);
+		user.setBanReason(null);
+		userDao.save(user);
 
 		return new BasicRes(ResMessage.SUCCESS.getCode(), "帳號已成功恢復為活躍狀態。");
 	}

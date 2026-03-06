@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.request.ComplaintReq;
 import com.example.demo.response.BasicRes;
 import com.example.demo.response.ComplaintRes;
+import com.example.demo.response.GetComplaintListRes;
 import com.example.demo.service.ComplaintService;
 
 import jakarta.validation.Valid;
@@ -20,17 +21,22 @@ import jakarta.validation.Valid;
 public class ComplaintController {
 	@Autowired
 	private ComplaintService complaintService;
-	
-	@PostMapping("gogobuy/complaint/add_conplaint")
+
+	@PostMapping("gogobuy/complaint/add_complaint")
 	public BasicRes addComplaint(@Valid @RequestBody ComplaintReq req) {
 		return complaintService.addComplaint(req);
 	}
-	
+
 	@GetMapping("gogobuy/complaint/get_complaint")
 	public ComplaintRes getComplaint(@RequestParam("id") int id) {
 		return complaintService.getComplaint(id);
 	}
-	
+
+	@GetMapping("gogobuy/complaint/all_complaints")
+	public GetComplaintListRes getAllComplaints() {
+		return complaintService.getAllComplaints();
+	}
+
 	@PostMapping("gogobuy/complaint/set_state")
 	public BasicRes finishComplaint(@RequestParam("id") int id) {
 		return complaintService.finishComplaint(id);
