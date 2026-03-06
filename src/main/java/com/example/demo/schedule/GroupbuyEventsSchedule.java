@@ -28,12 +28,11 @@ public class GroupbuyEventsSchedule {
     // "0 * * * * *" 代表「每分鐘的第一秒」執行一次
 
     @Scheduled(cron = "0 * * * * *")
-    @Transactional
     public void autoUpdateEventsStatus() {
     	
     	// 查詢狀態 open 且 結單時間結束的
     	List<GroupbuyEvents> expiredEvents = groupbuyEventsDao.findByEndTimeBeforeAndStatus(
-    			GroupbuyStatusEnum.OPEN.name(),
+                GroupbuyStatusEnum.OPEN.name(),
                 LocalDateTime.now()
             );
     	// 檢查
@@ -45,7 +44,7 @@ public class GroupbuyEventsSchedule {
     		try {
                 // 產帳單 + 算運費 + 改狀態 
                 // 這裡的 ID 欄位請根據你 Entity 實際名稱修改
-                groupbuyEventsService.autoCloseEvent(
+                groupbuyEventsService.closeEvent(
                 		events.getId(), 
                 		events.getHostId());
                 successCount++;
