@@ -1,15 +1,19 @@
-src/main/resources/application.properties
 HELP.md
-src/main/resources/application.properties
-.gradle
 .metadata
 logs/
-build/
-src/main/resources/application.properties
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 .metadata
+
+.gradle/
+build/
+!**/src/main/resources/application.properties
+*.class
+*.jar
+.idea/
+.DS_Store
+
 ### STS ###
 .apt_generated
 .classpath

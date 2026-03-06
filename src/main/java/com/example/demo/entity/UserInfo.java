@@ -1,5 +1,7 @@
 package com.example.demo.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -40,12 +42,34 @@ public class UserInfo {
 	@Column(name = "status")
 	private String status;
 
+	@Column(name = "banned_until")
+	private LocalDateTime bannedUntil;
+
+	@Column(name = "ban_reason")
+	private String banReason;
+
 	public String getStatus() {
 		return status;
 	}
 
 	public void setStatus(String status) {
 		this.status = status;
+	}
+
+	public LocalDateTime getBannedUntil() {
+		return bannedUntil;
+	}
+
+	public void setBannedUntil(LocalDateTime bannedUntil) {
+		this.bannedUntil = bannedUntil;
+	}
+
+	public String getBanReason() {
+		return banReason;
+	}
+
+	public void setBanReason(String banReason) {
+		this.banReason = banReason;
 	}
 
 	public String getId() {

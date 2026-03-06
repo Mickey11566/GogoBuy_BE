@@ -20,5 +20,8 @@ public class ValidationMsg {
 	public static final String TITLE_EMPTY = " 許願標題為空";
 	public static final String ANONYMOUS_EMPTY = " 匿名為空";
 	public static final String LOCATION_EMPTY = " 取貨點為空";
+	
+	public static final String REASON_EMPTY = "理由為空";
+	public static final String EVENT_ID_EMPTY = "Event ID 為空";
 
 }

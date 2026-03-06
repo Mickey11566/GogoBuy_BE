@@ -372,6 +372,9 @@ public class OrdersService {
 			return new BasicRes(404, "在此團購中找不到該使用者的有效訂單");
 		}
 
+		// 順便刪除對應的結算單 (因為沒訂單了，結算也沒意義)
+		personalOrderDao.deleteByEventsIdAndUserId(eventsId, userId);
+
 		// 如果是團長刪除成員訂單，發送通知 (僅限站內)
 		if (StringUtils.hasText(actingUserId) && !actingUserId.equals(userId)) {
 			if (event != null && actingUserId.equals(event.getHostId())) {
