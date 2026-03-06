@@ -30,6 +30,10 @@ public class ComplaintController {
 	public ComplaintRes getComplaint(@RequestParam("id") int id) {
 		return complaintService.getComplaint(id);
 	}
+	@GetMapping("gogobuy/complaint/all_complaint")
+	public ComplaintRes allComplaint() {
+		return complaintService.allComplaint();
+	}
 	
 	@PostMapping("gogobuy/complaint/set_state")
 	public BasicRes finishComplaint(@RequestParam("id") int id) {

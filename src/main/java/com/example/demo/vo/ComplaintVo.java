@@ -23,4 +23,13 @@ public class ComplaintVo {
 	public void setReason(String reason) {
 		this.reason = reason;
 	}
+	public ComplaintVo(String complaintUserName, String respondentUserName, String reason) {
+		super();
+		this.complaintUserName = complaintUserName;
+		this.respondentUserName = respondentUserName;
+		this.reason = reason;
+	}
+	public ComplaintVo() {
+		super();
+	}
 }
