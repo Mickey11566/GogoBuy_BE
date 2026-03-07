@@ -62,12 +62,12 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	// 手動結單更新
 	@Transactional
 	@Modifying
-	@Query(value = "update groupbuy_events set status = ?1 where id = ?2 and host_id = ?3 ", nativeQuery = true)
+	@Query(value = "update groupbuy_events set status = ?1 where id = ?2 and host_id = ?3 and is_deleted = false ", nativeQuery = true)
 	public int updateStatus(String status, int id, String hostId);
 
 	// 自動比較結單時間並結單
 	@Modifying
-	@Query(value = "update groupbuy_events set status = ?1 where end_time <= ?2 and status = ?3 ", nativeQuery = true)
+	@Query(value = "update groupbuy_events set status = ?1 where end_time <= ?2 and status = ?3 and is_deleted = false", nativeQuery = true)
 	public int autoUpdateEventsStatus(String targetStatus, LocalDateTime now, String currentStatus);
 
 	// 先刪子表再刪主表(這個是要接API的刪除)
@@ -110,10 +110,9 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	public String getSplitTypeById(int eventsId);
 
 	// 查詢 時間已到 且 狀態OPEN 的活動
-	@Query(value = "select * from groupbuy_events where status = 'OPEN' and end_time <= now() ", nativeQuery = true)
+	@Query(value = "select * from groupbuy_events where status = 'OPEN' and end_time <= now() and is_deleted = false ", nativeQuery = true)
 	public List<GroupbuyEvents> findByEndTimeBeforeAndStatus(@Param("status") String status,
 			@Param("now") LocalDateTime now);
-	
 
 	// 物理刪除
 	@Modifying
