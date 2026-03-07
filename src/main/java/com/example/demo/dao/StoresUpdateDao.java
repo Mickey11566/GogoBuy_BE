@@ -77,7 +77,7 @@ public interface StoresUpdateDao extends JpaRepository<Stores, Integer> {
 	@Query(value = "DELETE FROM menu WHERE stores_id = ?1 AND id NOT IN (SELECT DISTINCT menu_id FROM orders WHERE is_deleted = false)", nativeQuery = true)
 	public void deleteMenuByStoreId(int storeId);
 
-	// 標記有訂單的菜單品項為不可用 (is_available = false，避免 FK 衝突，並阻止新团購選用)
+	// 標記有訂單的菜單品項為不可用 (is_available = false，避免 FK 衝突，並阻止新團購選用)
 	@Modifying
 	@Transactional
 	@Query(value = "UPDATE menu SET is_available = false WHERE stores_id = ?1 AND id IN (SELECT DISTINCT menu_id FROM orders WHERE is_deleted = false)", nativeQuery = true)
