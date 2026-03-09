@@ -6,6 +6,7 @@ import java.util.Map;
 import com.example.demo.entity.Stores;
 import com.example.demo.vo.FeeDescriptionVo;
 import com.example.demo.vo.MenuCategoriesVo;
+import com.example.demo.vo.MenuVo;
 import com.example.demo.vo.ProductOptionGroupsVo;
 import com.example.demo.vo.StoreOperatingHoursVo;
 
@@ -16,8 +17,10 @@ public class StoresRes extends BasicRes {
 
 	// 新功能專用 (用於附近店家的 Projection)
 	private List<?> data;
-	
-	//營業中篩選用	
+
+	private List<MenuVo> menuVoList;
+
+	// 營業中篩選用
 	private List<Map<String, Object>> storeOperatingList;
 
 	private List<StoreOperatingHoursVo> operatingHoursVoList;
@@ -51,15 +54,13 @@ public class StoresRes extends BasicRes {
 
 	// 供詳細資料 getStoreById 使用的完整建構子
 	public StoresRes(int code, String message, List<Stores> storeList, List<StoreOperatingHoursVo> operatingHoursVoList,
-			List<MenuCategoriesVo> menuCategoriesVoList,
-			List<ProductOptionGroupsVo> productOptionGroupsVoList) {
+			List<MenuCategoriesVo> menuCategoriesVoList, List<ProductOptionGroupsVo> productOptionGroupsVoList) {
 		super(code, message);
 		this.storeList = storeList;
 		this.operatingHoursVoList = operatingHoursVoList;
 		this.menuCategoriesVoList = menuCategoriesVoList;
 		this.productOptionGroupsVoList = productOptionGroupsVoList;
 	}
-
 
 	public List<Stores> getStoreList() {
 		return storeList;
@@ -84,7 +85,6 @@ public class StoresRes extends BasicRes {
 	public void setOperatingHoursVoList(List<StoreOperatingHoursVo> list) {
 		this.operatingHoursVoList = list;
 	}
-
 
 	public List<MenuCategoriesVo> getMenuCategoriesVoList() {
 		return menuCategoriesVoList;
@@ -117,6 +117,13 @@ public class StoresRes extends BasicRes {
 	public void setStoreOperatingList(List<Map<String, Object>> storeOperatingList) {
 		this.storeOperatingList = storeOperatingList;
 	}
-	
-	
+
+	public List<MenuVo> getMenuVoList() {
+		return menuVoList;
+	}
+
+	public void setMenuVoList(List<MenuVo> menuVoList) {
+		this.menuVoList = menuVoList;
+	}
+
 }

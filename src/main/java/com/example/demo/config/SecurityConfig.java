@@ -84,20 +84,9 @@ public class SecurityConfig {
 							request.getSession().setAttribute("account", email);
 						}
 
-						// 動態獲取來源。如果前端有傳入 Referer 或特定 Header，可以從那裡抓
-						// 或者最簡單的方法：根據目前 Request 的 Host 來判斷要跳轉去哪裡
-						String origin = request.getHeader("Referer");
-						String redirectBase = (origin != null && !origin.isEmpty()) ? origin.split("/#/")[0]
-								: frontendUrl;
-
-						// 如果想要更精確，可以判斷 request.getServerName() 是否包含 .ts.net
-						if (request.getServerName().endsWith(".ts.net")) {
-							redirectBase = "https://" + request.getServerName() + ":8443"; // 假設前端掛在 8443
-						}
-
-						// 確保最後路徑正確 (避免重複的 /)
-						String finalRedirectUrl = redirectBase.endsWith("/") ? redirectBase + "auth-callback"
-								: redirectBase + "/auth-callback";
+						// 統一使用配置的前端網址進行跳轉，避免受 Referer 影響導向錯誤網域
+						String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+						String finalRedirectUrl = baseUrl + "#/auth-callback";
 						response.sendRedirect(finalRedirectUrl);
 					});
 
@@ -119,21 +108,26 @@ public class SecurityConfig {
 						System.out.println("OAuth2 Login Failure: " + errorMessage); // Debug logging
 
 						// 特殊處理：如果是「新帳號建立」的例外，導向到驗證提示而非錯誤
-						if (errorMessage.contains("Account created")) {
-							String encodedMsg = URLEncoder.encode("註冊成功，已發送驗證信至您的信箱", StandardCharsets.UTF_8);
+						String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+						if (errorMessage.contains("Account created")
+								|| errorMessage.contains("Account not activated")) {
+							String encodedMsg = URLEncoder.encode("註冊成功，已發送驗證信至您的信箱，請開通後再登入", StandardCharsets.UTF_8);
 							response.sendRedirect(
-									frontendUrl + "/gogobuy/login?verificationSent=true&message=" + encodedMsg);
+									baseUrl + "#/gogobuy/login?verificationSent=true&message=" + encodedMsg);
 						} else {
 							String encodedMsg = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
-							response.sendRedirect(frontendUrl + "/gogobuy/login?errorMsg=" + encodedMsg);
+							response.sendRedirect(baseUrl + "#/gogobuy/login?errorMsg=" + encodedMsg);
 						}
 					});
 				})
 
 				// 3. 登出區塊
-				.logout(logout -> {
+				.logout(logout ->
+
+				{
 					// 登出成功後同樣跳回前端首頁
-					logout.logoutSuccessUrl(frontendUrl);
+					String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+					logout.logoutSuccessUrl(baseUrl + "#/gogobuy/home");
 					// 順便清除 Session 和 Cookie，確保登出乾淨
 					// JSESSIONID : Java Web 容器在使用者第一次訪問時自動產生的 Cookie
 					logout.invalidateHttpSession(true);

@@ -219,6 +219,14 @@ public class UserController {
 		return userService.updateFavoriteStores(id, storesList);
 	}
 
+	/*
+	 * 更新角色介面 API
+	 */
+	@PostMapping("gogobuy/update-user-role")
+	public BasicRes updateRole(@RequestParam("id") String id, @RequestParam("role") String role) {
+		return userService.adminUpdateRole(id, role);
+	}
+
 	// /*
 	// *查詢最愛店家
 	// */

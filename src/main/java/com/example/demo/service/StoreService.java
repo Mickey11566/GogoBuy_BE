@@ -710,7 +710,7 @@ public class StoreService {
 
 			// 測試BUG
 
-//			res.setMenuVoList(menuVoList);
+			res.setMenuVoList(menuVoList);
 
 			// 選項群組與細項 (兩層巢狀)
 			List<Map<String, Object>> groupsMap = storesSearchDao.getOptionGroupsByStoreId(storesId);

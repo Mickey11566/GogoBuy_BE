@@ -211,8 +211,8 @@ public class MessagesService {
 			message.setFrom("GogobuyAdmin@gmail.com");
 			message.setTo(email);
 			message.setSubject("[GoGoBuy] " + title);
-			String displayUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
-			message.setText("您好：\n\n" + content + "\n\n詳情請點擊 " + displayUrl + "gogobuy/home 查看 GoGoBuy 官網 。");
+			String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+			message.setText("您好：\n\n" + content + "\n\n詳情請點擊 " + baseUrl + "#/gogobuy/home 查看 GoGoBuy 官網 。");
 			mailSender.send(message);
 		} catch (Exception e) {
 			// 郵件發送失敗不應中斷整個流程，僅紀錄錯誤

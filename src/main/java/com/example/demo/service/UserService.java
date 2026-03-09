@@ -96,9 +96,8 @@ public class UserService {
 		// 生成 JWT Token
 		String token = jwtService.createActivationToken(userId);
 
-		// 生成開通連結
 		String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
-		String activationUrl = baseUrl + "active-account?token=" + token;
+		String activationUrl = baseUrl + "#/active-account?token=" + token;
 
 		try {
 			// 執行發送郵件
@@ -633,5 +632,17 @@ public class UserService {
 					.collect(Collectors.toCollection(ArrayList::new)); // 變成List
 		}
 		return new ArrayList<>();
+	}
+
+	// 管理員更換角色
+	@Transactional
+	public BasicRes adminUpdateRole(String id, String role) {
+		User user = userDao.getUserById(id);
+		if (user == null) {
+			return new BasicRes(ResMessage.USER_NOT_FOUND.getCode(), ResMessage.USER_NOT_FOUND.getMessage());
+		}
+
+		userDao.updateRole(id, role);
+		return new BasicRes(ResMessage.SUCCESS.getCode(), "角色已成功更新。");
 	}
 }

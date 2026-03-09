@@ -67,7 +67,7 @@ public class LinePayService {
         String displayBack = backendUrl.endsWith("/") ? backendUrl : backendUrl + "/";
 
         RedirectUrls urls = new RedirectUrls(
-                displayFront + "user/orders",
+                displayFront + "#/user/orders",
                 displayBack + "api/payments/linepay/cancel");
 
         LinePayReq request = new LinePayReq(

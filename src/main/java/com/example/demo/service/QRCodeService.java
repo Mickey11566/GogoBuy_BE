@@ -22,8 +22,8 @@ public class QRCodeService {
     private String frontendUrl;
 
     public BufferedImage generateGroupBuyQRCode(int eventId) throws Exception {
-        // 基礎網址(前端網址)
-        String turnUrl = frontendUrl + (frontendUrl.endsWith("/") ? "" : "/") + "groupbuy-event/group-follow/";
+        String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+        String turnUrl = baseUrl + "#/groupbuy-event/group-follow/";
         // 自動組合網址
         String fullUrl = turnUrl + eventId;
 
