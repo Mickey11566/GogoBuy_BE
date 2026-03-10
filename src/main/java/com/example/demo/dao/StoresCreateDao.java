@@ -42,11 +42,11 @@ public interface StoresCreateDao extends JpaRepository<Stores, Integer> {
 	@Modifying
 	@Transactional
 	@Query(value = "insert into menu(stores_id, category_id, name, description,"
-			+ " base_price, image, is_available, unusual)"//
-			+ " values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", nativeQuery = true)
+			+ " base_price, image, is_available, unusual, is_deleted)"//
+			+ " values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", nativeQuery = true)
 	public int addMenu(int storesId, int categoryId, String name, //
 			String description, int base_price, //
-			String image, boolean available, String unusual);
+			String image, boolean available, String unusual, boolean deleted);
 
 	// 新增品項群組
 	@Modifying

@@ -326,7 +326,7 @@ public class StoreService {
 
 					// 傳入剛剛拿到的 realCategoryId
 					storesCreateDao.addMenu(storeId, realCategoryId, menuVo.getName(), menuVo.getDescription(),
-							menuVo.getBasePrice(), menuVo.getImage(), menuVo.isAvailable(), unusualStr);
+							menuVo.getBasePrice(), menuVo.getImage(), menuVo.isAvailable(),unusualStr,menuVo.isDeleted());
 
 					// 處理圖片確認menuVo.getImage() != null && !menuVo.getImage().isEmpty()
 					if (StringUtils.hasText(menuVo.getImage())) {

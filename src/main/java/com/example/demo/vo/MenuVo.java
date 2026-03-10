@@ -23,6 +23,8 @@ private int id;
 	private boolean available;
 	
 	private List<Map<String,String>> unusual;
+	
+	private boolean deleted;
 
 	public int getId() {
 		return id;
@@ -88,8 +90,6 @@ private int id;
 		this.available = available;
 	}
 
-
-
 	public List<Map<String, String>> getUnusual() {
 		return unusual;
 	}
@@ -102,8 +102,17 @@ private int id;
 		super();
 	}
 
+
+	public boolean isDeleted() {
+		return deleted;
+	}
+
+	public void setDeleted(boolean deleted) {
+		this.deleted = deleted;
+	}
+
 	public MenuVo(int id, int storesId, int categoryId, String name, String description, int basePrice, String image,
-			boolean available, List<Map<String, String>> unusual) {
+			boolean available, List<Map<String, String>> unusual, boolean deleted) {
 		super();
 		this.id = id;
 		this.storesId = storesId;
@@ -114,6 +123,7 @@ private int id;
 		this.image = image;
 		this.available = available;
 		this.unusual = unusual;
+		this.deleted = deleted;
 	}
 
 

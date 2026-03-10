@@ -40,6 +40,9 @@ public class Menu {
 	
 	@Column(name = "unusual")
 	private String unusual;
+	
+	@Column(name = "is_deleted")
+	private boolean deleted;
 
 	public int getId() {
 		return id;
@@ -111,6 +114,14 @@ public class Menu {
 
 	public void setUnusual(String unusual) {
 		this.unusual = unusual;
+	}
+
+	public boolean isDeleted() {
+		return deleted;
+	}
+
+	public void setDeleted(boolean deleted) {
+		this.deleted = deleted;
 	}
 	
 	
