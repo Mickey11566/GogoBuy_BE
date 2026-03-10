@@ -510,12 +510,13 @@ public class GroupbuyEventsService {
 	}
 
 	// 回傳用商店ID查詢符合的團
-	public GroupbuyEventsRes getGroupbuyEventByStoresId(int storesId) {
+	public GroupbuyEventsRes getGroupbuyEventByStoresId(int storesId, String currentUserId) {
 		try {
 			if (storesId <= 0) {
 				return new GroupbuyEventsRes(400, "輸入正確的stores_id");
 			}
-			List<GroupbuyEvents> eventsList = groupbuyEventsDao.getGroupbuyEventByStoresId(storesId);
+			String uid = (currentUserId != null) ? currentUserId : "";
+			List<GroupbuyEvents> eventsList = groupbuyEventsDao.getGroupbuyEventByStoresId(storesId, uid);
 			if (CollectionUtils.isEmpty(eventsList)) {
 				return new GroupbuyEventsRes(200, "查無此店家的菜單資料");
 			}
@@ -528,9 +529,10 @@ public class GroupbuyEventsService {
 	}
 
 	// 回傳全部開團的 (包含已結束，供後台管理使用)
-	public GroupbuyEventsRes getAll() {
+	public GroupbuyEventsRes getAll(String currentUserId) {
 		try {
-			List<GroupbuyEventsProjection> list = groupbuyEventsDao.getAll();
+			String uid = (currentUserId != null) ? currentUserId : "";
+			List<GroupbuyEventsProjection> list = groupbuyEventsDao.getAll(uid);
 			if (list == null) {
 				return new GroupbuyEventsRes(400, "目前暫無任何開團資料");
 			}
@@ -542,9 +544,10 @@ public class GroupbuyEventsService {
 		}
 	}
 
-	// 回傳暱稱有的開團
-	public GroupbuyEventsRes getGroupbuyEventByNickname(String hostNickname) {
-		List<GroupsSearchView> nicknameEventsList = groupsSearchViewDao.getGroupbuyEventByNickname(hostNickname);
+	// 回傳暱稱有的開團，過濾黑名單
+	public GroupbuyEventsRes getGroupbuyEventByNickname(String hostNickname, String currentUserId) {
+		String uid = (currentUserId != null) ? currentUserId : "";
+		List<GroupsSearchView> nicknameEventsList = groupsSearchViewDao.getGroupbuyEventByNickname(hostNickname, uid);
 		if (nicknameEventsList == null) {
 			return new GroupbuyEventsRes(200, "查無此開團者的開團資料");
 		}
@@ -557,9 +560,10 @@ public class GroupbuyEventsService {
 		}
 	}
 
-	// 回傳eventsId的活動
-	public GroupbuyEventsRes getEventsByEventsId(int id) {
-		List<GroupsSearchView> list = groupbuyEventsDao.getEventsByEventsId(id);
+	// 回傳eventsId的活動，過濾黑名單
+	public GroupbuyEventsRes getEventsByEventsId(int id, String currentUserId) {
+		String uid = (currentUserId != null) ? currentUserId : "";
+		List<GroupsSearchView> list = groupbuyEventsDao.getEventsByEventsId(id, uid);
 		if (CollectionUtils.isEmpty(list)) {
 			return new GroupbuyEventsRes(404, "查無此資料");
 		}

@@ -12,6 +12,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -737,7 +738,7 @@ public class StoreService {
 			for (MenuCategoriesVo cat : categoriesVoList) {
 				List<MenuVo> itemsForThisCat = new ArrayList<>();
 				for (MenuVo item : menuVoList) {
-					if (item.getCategoryId() == cat.getId()) {
+					if (Objects.equals(item.getCategoryId(), cat.getId())) {
 						itemsForThisCat.add(item);
 					}
 				}
