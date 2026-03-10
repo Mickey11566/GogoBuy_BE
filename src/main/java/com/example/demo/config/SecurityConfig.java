@@ -40,12 +40,9 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:4200", "http://127.0.0.1:4200", "https://*.ts.net:*", // 允許所有
-																													// Tailscale
-																													// 網域與任何連接埠
-				"https://gogobuy.netlify.app/", // 你的 Render 前端網址
-				frontendUrl // 保留原本從 properties 讀取的設定
-		)); // Angular 端口
+		config.setAllowedOriginPatterns(
+				List.of("http://localhost:4200", "http://127.0.0.1:4200", "https://*.ts.net:*", "https://*.ts.net",
+						"https://gogobuy.netlify.app/", frontendUrl));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true); // 允許攜帶 Cookie (JSESSIONID)
@@ -99,11 +96,9 @@ public class SecurityConfig {
 						}
 
 						// 確保最後路徑正確 (避免重複的 /)
-						if (redirectBase.endsWith("/")) {
-							redirectBase = redirectBase.substring(0, redirectBase.length() - 1);
-						}
-
-						response.sendRedirect(frontendUrl + "/auth-callback");
+						String finalRedirectUrl = redirectBase.endsWith("/") ? redirectBase + "auth-callback"
+								: redirectBase + "/auth-callback";
+						response.sendRedirect(finalRedirectUrl);
 					});
 
 					// 登入失敗處理：將錯誤訊息編碼後傳回前端
