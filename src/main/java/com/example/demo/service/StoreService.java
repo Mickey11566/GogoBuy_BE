@@ -6,13 +6,16 @@ import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +29,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.constants.ResMessage;
-import com.example.demo.dao.MenuCategoryRepository;
+import com.example.demo.dao.MenuCategoryDao;
 import com.example.demo.dao.ProductOptionGroupsDao;
 import com.example.demo.dao.StoresCreateDao;
 import com.example.demo.dao.StoresSearchDao;
@@ -80,7 +83,7 @@ public class StoreService {
 	private GoogleMapService googleMapService;
 
 	@Autowired
-	private MenuCategoryRepository menuCategoryRepository;
+	private MenuCategoryDao menuCategoryRepository;
 
 	@Autowired
 	private WishService wishService;
@@ -141,7 +144,7 @@ public class StoreService {
 	private void checkHours(List<StoreOperatingHoursVo> list) throws Exception {
 		if (CollectionUtils.isEmpty(list))
 			return;
-		java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+		DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 		for (StoreOperatingHoursVo vo : list) {
 			try {
 				// 檢查是否為 1~7
@@ -169,7 +172,7 @@ public class StoreService {
 		}
 
 		// 蒐集關聯ID
-		java.util.Set<String> validTags = new java.util.HashSet<>();
+		Set<String> validTags = new HashSet<>();
 		if (!CollectionUtils.isEmpty(groupList)) {
 			for (ProductOptionGroupsVo g : groupList) {
 				if (StringUtils.hasText(g.getTempId()))
@@ -250,42 +253,60 @@ public class StoreService {
 
 	@Transactional(rollbackFor = Exception.class)
 	public void saveSubTables(int storeId, StoresReq req) throws JsonProcessingException {
-		// 填入營業時間
+		// 1. 清除營業時間 (此表無 FK，全刪後建是安全的)
+		storesUpdateDao.deleteOperatingHoursByStoreId(storeId);
 		List<StoreOperatingHoursVo> operatingHoursvoList = req.getOperatingHoursVoList();
-		for (StoreOperatingHoursVo vo : operatingHoursvoList) {
-			storesCreateDao.addOperatingHours(storeId, vo.getWeek(), vo.getOpenTime(), vo.getCloseTime());
+		if (!CollectionUtils.isEmpty(operatingHoursvoList)) {
+			for (StoreOperatingHoursVo vo : operatingHoursvoList) {
+				storesCreateDao.addOperatingHours(storeId, vo.getWeek(), vo.getOpenTime(), vo.getCloseTime());
+			}
 		}
+
+		// 用於追蹤本次 payload 中存在的 ID，末尾進行「孤兒」清理 (加入 -1 避免空清單導致 SQL 錯誤)
+		List<Integer> activeGroupIds = new ArrayList<>(List.of(-1));
+		List<Integer> activeCategoryIds = new ArrayList<>(List.of(-1));
+		List<Integer> activeMenuIds = new ArrayList<>(List.of(-1));
 
 		// 填入選項群組
 		List<ProductOptionGroupsVo> ProductOptionGroupsVoList = req.getProductOptionGroupsVoList();
 		Map<String, Integer> idMap = new HashMap<>();
-		for (ProductOptionGroupsVo vo : ProductOptionGroupsVoList) {
-			ProductOptionGroups group = new ProductOptionGroups();
-			group.setStoresId(storeId);
-			group.setName(vo.getName());
-			group.setRequired(vo.isRequired());
-			group.setMaxSelection(vo.getMaxSelection());
+		if (!CollectionUtils.isEmpty(ProductOptionGroupsVoList)) {
+			for (ProductOptionGroupsVo vo : ProductOptionGroupsVoList) {
+				ProductOptionGroups group = new ProductOptionGroups();
 
-			group = productOptionGroupsDao.save(group);
+				// 如果有 ID，代表是更新舊資料
+				if (vo.getId() > 0) {
+					group.setId(vo.getId());
+					activeGroupIds.add(vo.getId());
+				}
 
-			int groupId = group.getId();
+				group.setStoresId(storeId);
+				group.setName(vo.getName());
+				group.setRequired(vo.isRequired());
+				group.setMaxSelection(vo.getMaxSelection());
 
-			if (StringUtils.hasText(vo.getTempId())) {
-				idMap.put(vo.getTempId(), group.getId());
-			} else {
-				// 如果是修改舊資料，可能直接傳 id，也要存入 map
-				idMap.put(String.valueOf(vo.getId()), group.getId());
-			}
+				group = productOptionGroupsDao.save(group);
 
-			// storesCreateDao.addOptionGroups(storeId, vo.getName(), vo.isRequired(),
-			// vo.getMaxSelection());
-			// int groupId = storesCreateDao.getLastInsertId();
-			// 填入選項
-			List<ProductOptionItemsVo> itemVoList = vo.getItems();
-			if (!CollectionUtils.isEmpty(itemVoList)) {
-				for (ProductOptionItemsVo itemVo : itemVoList) {
-					Integer finalPrice = (itemVo.getExtraPrice() == null) ? 0 : itemVo.getExtraPrice();
-					storesCreateDao.addOptionItems(groupId, itemVo.getName(), finalPrice);
+				int groupId = group.getId();
+				if (vo.getId() <= 0) {
+					activeGroupIds.add(groupId);
+				}
+
+				if (StringUtils.hasText(vo.getTempId())) {
+					idMap.put(vo.getTempId(), groupId);
+				}
+				// 統一存入 ID Map 供後續 Menu 關聯使用
+				idMap.put(String.valueOf(groupId), groupId);
+
+				// 填入選項 (選項通常數量少，採刪除後建)
+				storesUpdateDao.deleteOptionItemsByGroupId(groupId);
+
+				List<ProductOptionItemsVo> itemVoList = vo.getItems();
+				if (!CollectionUtils.isEmpty(itemVoList)) {
+					for (ProductOptionItemsVo itemVo : itemVoList) {
+						Integer finalPrice = (itemVo.getExtraPrice() == null) ? 0 : itemVo.getExtraPrice();
+						storesCreateDao.addOptionItems(groupId, itemVo.getName(), finalPrice);
+					}
 				}
 			}
 		}
@@ -295,47 +316,73 @@ public class StoreService {
 		if (!CollectionUtils.isEmpty(menuCategoriesVoList)) {
 			for (MenuCategoriesVo catVo : menuCategoriesVoList) {
 
-				// 存入類別並取得資料庫自動生成的 ID
+				// 存入類別 (若有 ID 則更新)
 				String priceLevelListStr = mapper.writeValueAsString(catVo.getPriceLevel());
-				int realCategoryId = categoryReturnId(storeId, catVo.getName(), priceLevelListStr);
+				int realCategoryId = categoryReturnId(storeId, catVo.getName(), priceLevelListStr, catVo.getId());
+				activeCategoryIds.add(realCategoryId);
 
 				// 存入屬於此類別的品項
 				List<MenuVo> items = catVo.getMenuVo();
-				for (MenuVo menuVo : items) {
+				if (!CollectionUtils.isEmpty(items)) {
+					for (MenuVo menuVo : items) {
 
-					List<Map<Integer, String>> finalUnusual = new ArrayList<>();
+						List<Map<Integer, String>> finalUnusual = new ArrayList<>();
 
-					if (menuVo.getUnusual() instanceof List) {
-						List<Map<String, String>> rawUnusual = mapper.convertValue(menuVo.getUnusual(),
-								new TypeReference<List<Map<String, String>>>() {
-								});
-						// (List<Map<String, String>>) menuVo.getUnusual();
-						for (Map<String, String> entry : rawUnusual) {
-							for (Map.Entry<String, String> e : entry.entrySet()) {
-								String tempId = e.getKey();
-								String description = e.getValue();
+						if (menuVo.getUnusual() instanceof List) {
+							List<Map<String, String>> rawUnusual = mapper.convertValue(menuVo.getUnusual(),
+									new TypeReference<List<Map<String, String>>>() {
+									});
+							for (Map<String, String> entry : rawUnusual) {
+								for (Map.Entry<String, String> e : entry.entrySet()) {
+									String tempId = e.getKey();
+									String description = e.getValue();
 
-								Integer realId = idMap.get(tempId);
-								if (realId != null) {
-									finalUnusual.add(Map.of(realId, description));
+									Integer realId = idMap.get(tempId);
+									if (realId != null) {
+										finalUnusual.add(Map.of(realId, description));
+									}
 								}
 							}
 						}
-					}
-					// 將轉換後的 finalUnusual 序列化為 JSON 字串
-					String unusualStr = mapper.writeValueAsString(finalUnusual);
+						// 將轉換後的 finalUnusual 序列化為 JSON 字串
+						String unusualStr = mapper.writeValueAsString(finalUnusual);
 
-					// 傳入剛剛拿到的 realCategoryId
-					storesCreateDao.addMenu(storeId, realCategoryId, menuVo.getName(), menuVo.getDescription(),
-							menuVo.getBasePrice(), menuVo.getImage(), menuVo.isAvailable(), unusualStr);
+						// 判斷是新增還是更新
+						if (menuVo.getId() > 0) {
+							// 嘗試更新
+							int affected = storesUpdateDao.updateMenu(menuVo.getId(), menuVo.getName(),
+									menuVo.getBasePrice(), unusualStr, menuVo.isAvailable(), menuVo.getImage(),
+									menuVo.getDescription());
 
-					// 處理圖片確認menuVo.getImage() != null && !menuVo.getImage().isEmpty()
-					if (StringUtils.hasText(menuVo.getImage())) {
-						imageService.confirmImage(menuVo.getImage());
+							if (affected > 0) {
+								activeMenuIds.add(menuVo.getId());
+							} else {
+								// 更新失敗則重新新增
+								storesCreateDao.addMenu(storeId, realCategoryId, menuVo.getName(),
+										menuVo.getDescription(), menuVo.getBasePrice(), menuVo.getImage(),
+										menuVo.isAvailable(), unusualStr);
+								activeMenuIds.add(storesCreateDao.getLastInsertId());
+							}
+						} else {
+							// 純新增
+							storesCreateDao.addMenu(storeId, realCategoryId, menuVo.getName(), menuVo.getDescription(),
+									menuVo.getBasePrice(), menuVo.getImage(), menuVo.isAvailable(), unusualStr);
+							activeMenuIds.add(storesCreateDao.getLastInsertId());
+						}
+
+						// 處理圖片確認
+						if (StringUtils.hasText(menuVo.getImage())) {
+							imageService.confirmImage(menuVo.getImage());
+						}
 					}
 				}
 			}
 		}
+
+		// 呼叫「孤兒」清理：刪除不在本次 payload 中且沒訂單的資料
+		storesUpdateDao.deleteMenuExcludeActive(storeId, activeMenuIds);
+		storesUpdateDao.deleteMenuCategoriesExcludeActive(storeId, activeCategoryIds);
+		storesUpdateDao.deleteOptionGroupsExcludeActive(storeId, activeGroupIds);
 	}
 
 	//// 填入品項
@@ -557,17 +604,10 @@ public class StoreService {
 			imageService.confirmImage(newImageUrl);
 		}
 
-		// 清除舊有的子表資料 (先刪除有外鍵關聯的底層資料)
-		// 順序：OptionItems -> OptionGroups -> Menu -> Categories -> Hours
-		// 先將「有訂單的菜單品項」標記為不可用，避免刪除時觸發 FK 衝突
+		// 標記有訂單的菜單品項為不可用 (避免刪除衝突，並阻止新團購選用)
 		storesUpdateDao.markOrderedMenuItemsUnavailable(storeId);
-		storesUpdateDao.deleteOptionItemsByStoreId(storeId);
-		storesUpdateDao.deleteOptionGroupsByStoreId(storeId);
-		storesUpdateDao.deleteMenuByStoreId(storeId);
-		storesUpdateDao.deleteMenuCategoriesByStoreId(storeId);
-		storesUpdateDao.deleteOperatingHoursByStoreId(storeId);
 
-		// 重新寫入子表資料
+		// 重新寫入子表資料 (Smart Update)
 		saveSubTables(storeId, req);
 
 		return new BasicRes(ResMessage.SUCCESS.getCode(), //
@@ -929,8 +969,14 @@ public class StoreService {
 		}
 	}
 
-	private int categoryReturnId(int storeId, String name, String priceLevel) {
+	private int categoryReturnId(int storeId, String name, String priceLevel, int categoryId) {
 		MenuCategories categories = new MenuCategories();
+
+		// 如果有傳入 ID，則設定 ID 觸發 JPA 的更新邏輯
+		if (categoryId > 0) {
+			categories.setId(categoryId);
+		}
+
 		categories.setStoreId(storeId);
 		categories.setName(name);
 		categories.setPriceLevel(priceLevel);
@@ -951,10 +997,8 @@ public class StoreService {
 
 			int dayOfWeek = ldt.getDayOfWeek().getValue();
 
-			List<Map<String, Object>> storeList = storesSearchDao.findOperatingStoresByIds(
-					req.getFilteredStoreIds(),
-					now,
-					dayOfWeek);
+			List<Map<String, Object>> storeList = storesSearchDao.findOperatingStoresByIds(req.getFilteredStoreIds(),
+					now, dayOfWeek);
 
 			if (CollectionUtils.isEmpty(storeList)) {
 				return new StoresRes(404, "所選店家目前皆非營業時間(或今日公休)喵！");

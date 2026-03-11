@@ -1,5 +1,7 @@
 package com.example.demo.dao;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -42,8 +44,9 @@ public interface StoresUpdateDao extends JpaRepository<Stores, Integer> {
 	// 更新菜單品項
 	@Modifying
 	@Transactional
-	@Query(value = "UPDATE menu SET name = ?2, base_price = ?3, unusual = ?4, is_available = ?5 WHERE id = ?1", nativeQuery = true)
-	public int updateMenu(int menuId, String name, int basePrice, String unusual, boolean available);
+	@Query(value = "UPDATE menu SET name = ?2, base_price = ?3, unusual = ?4, is_available = ?5, image = ?6, description = ?7 WHERE id = ?1", nativeQuery = true)
+	public int updateMenu(int menuId, String name, int basePrice, String unusual, boolean available, String image,
+			String description);
 
 	// 更新品項類別群組 (例如: 尺寸級距)
 	@Modifying
@@ -102,11 +105,31 @@ public interface StoresUpdateDao extends JpaRepository<Stores, Integer> {
 			+ "(SELECT id FROM product_option_groups WHERE stores_id = ?1)", nativeQuery = true)
 	public void deleteOptionItemsByStoreId(int storeId);
 
-	// 根據群組id刪除營業時間
+	// 根據群組id刪除選項
 	@Modifying
 	@Transactional
 	@Query(value = "DELETE FROM product_option_items WHERE group_id = ?1", nativeQuery = true)
 	public void deleteOptionItemsByGroupId(int groupId);
+
+	// --- 智慧更新所需的刪除功能 (排除現有 ID) ---
+
+	// 刪除不在 activeIds 中且無訂單的菜單品項
+	@Modifying
+	@Transactional
+	@Query(value = "DELETE FROM menu WHERE stores_id = ?1 AND id NOT IN (?2) AND id NOT IN (SELECT DISTINCT menu_id FROM orders WHERE is_deleted = false)", nativeQuery = true)
+	public void deleteMenuExcludeActive(int storeId, List<Integer> activeIds);
+
+	// 刪除不在 activeIds 且無品項關聯的分類
+	@Modifying
+	@Transactional
+	@Query(value = "DELETE FROM menu_categories WHERE stores_id = ?1 AND id NOT IN (?2) AND id NOT IN (SELECT DISTINCT category_id FROM menu WHERE stores_id = ?1)", nativeQuery = true)
+	public void deleteMenuCategoriesExcludeActive(int storeId, List<Integer> activeIds);
+
+	// 刪除不在 activeIds 中的選項群組
+	@Modifying
+	@Transactional
+	@Query(value = "DELETE FROM product_option_groups WHERE stores_id = ?1 AND id NOT IN (?2)", nativeQuery = true)
+	public void deleteOptionGroupsExcludeActive(int storeId, List<Integer> activeIds);
 
 	// 店家資料刪除
 	@Modifying
