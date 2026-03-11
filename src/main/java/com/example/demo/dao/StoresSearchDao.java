@@ -33,7 +33,7 @@ public interface StoresSearchDao extends JpaRepository<Stores, Integer> {
 	public List<Map<String, Object>> getOperatingHoursByStoreId(int storeId);
 
 	// 取得菜單品項
-	@Query(value = "SELECT stores_id as storesId, id, category_id as categoryId, name, description, base_price as basePrice, image, is_available as available, unusual FROM menu WHERE stores_id = ?1", nativeQuery = true)
+	@Query(value = "SELECT stores_id as storesId, id, category_id as categoryId, name, description, base_price as basePrice, image, is_available as available, unusual FROM menu WHERE stores_id = ?1 and is_deleted = false", nativeQuery = true)
 	public List<Map<String, Object>> getMenuByStoreId(int storeId);
 
 	// 取得品項類別 (包含價格級距 JSON)
