@@ -16,11 +16,11 @@ import com.example.demo.projection.StoreDistanceProjection;
 @Repository
 public interface StoresSearchDao extends JpaRepository<Stores, Integer> {
 
-//	拿取全店家
+	// 拿取全店家
 	@Query(value = "SELECT * FROM stores ", nativeQuery = true)
 	public List<Stores> getAllStores();
 
-//	名字模糊搜尋
+	// 名字模糊搜尋
 	@Query(value = "SELECT * FROM stores " + "WHERE name LIKE CONCAT('%', ?1, '%') " + "AND is_deleted = false "
 			+ "ORDER BY id DESC", nativeQuery = true)
 	public List<Stores> findStoresByNameLike(String name);
@@ -71,34 +71,33 @@ public interface StoresSearchDao extends JpaRepository<Stores, Integer> {
 			@Param("radius") double radius, @Param("minLat") double minLat, @Param("maxLat") double maxLat,
 			@Param("minLng") double minLng, @Param("maxLng") double maxLng);
 
-	//	根據範圍(距離、種類)找營業中店家
+	// 根據範圍(距離、種類)找營業中店家
 	@Query(value = "SELECT s.id, s.name, s.category, s.image, h.open_time, h.close_time " +
-            "FROM stores s " +
-            "JOIN store_operating_hours h ON s.id = h.stores_id " +
-            "WHERE s.id IN :storeIds " +
-            "AND s.is_deleted = 0 " +
-            "AND h.week = :dayOfWeek " +
-            "AND h.is_closed = 0 " + 
-            "AND (" +
-            "  CASE " +
-            "    WHEN h.open_time < h.close_time THEN :now BETWEEN h.open_time AND h.close_time " +
-            "    ELSE :now >= h.open_time OR :now <= h.close_time " +
-            "  END" +
-            ")", nativeQuery = true)
-List<Map<String, Object>> findOperatingStoresByIds(
- @Param("storeIds") List<Integer> storeIds, 
- @Param("now") LocalTime now,
- @Param("dayOfWeek") int dayOfWeek
-);
-	
-	//	查詢多個店家是否存在
-	@Query(value="select id from stores where stores.id in :storesId", nativeQuery = true)
-	List<Integer> exsitStores(@Param("storesId") List<Integer>storesId) ;
-	
-	//	查價格級距
-	@Query(value="SELECT mc.price_level "
+			"FROM stores s " +
+			"JOIN store_operating_hours h ON s.id = h.stores_id " +
+			"WHERE s.id IN :storeIds " +
+			"AND s.is_deleted = 0 " +
+			"AND h.week = :dayOfWeek " +
+			"AND h.is_closed = 0 " +
+			"AND (" +
+			"  CASE " +
+			"    WHEN h.open_time < h.close_time THEN :now BETWEEN h.open_time AND h.close_time " +
+			"    ELSE :now >= h.open_time OR :now <= h.close_time " +
+			"  END" +
+			")", nativeQuery = true)
+	List<Map<String, Object>> findOperatingStoresByIds(
+			@Param("storeIds") List<Integer> storeIds,
+			@Param("now") LocalTime now,
+			@Param("dayOfWeek") int dayOfWeek);
+
+	// 查詢多個店家是否存在
+	@Query(value = "select id from stores where stores.id in :storesId", nativeQuery = true)
+	List<Integer> exsitStores(@Param("storesId") List<Integer> storesId);
+
+	// 查價格級距
+	@Query(value = "SELECT mc.price_level "
 			+ "FROM menu m "
 			+ "JOIN menu_categories mc ON m.category_id = mc.id "
 			+ "WHERE m.id = ?", nativeQuery = true)
-	String getPriceLevelByMenuId(@Param("menuId") int menuId) ;
+	String getPriceLevelByMenuId(@Param("menuId") int menuId);
 }
