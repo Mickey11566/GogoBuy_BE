@@ -774,7 +774,9 @@ public class StoreService {
 						});
 				res.setFeeDescriptionVoList(fees);
 			}
-
+			//拿來記錄有東西的類別
+			List<MenuCategoriesVo> filteredCategories = new ArrayList<>();
+			
 			for (MenuCategoriesVo cat : categoriesVoList) {
 				List<MenuVo> itemsForThisCat = new ArrayList<>();
 				for (MenuVo item : menuVoList) {
@@ -782,9 +784,13 @@ public class StoreService {
 						itemsForThisCat.add(item);
 					}
 				}
-				cat.setMenuVo(itemsForThisCat); // 把屬於該類別的品項塞進去
+				
+				if (!itemsForThisCat.isEmpty()) {
+			        cat.setMenuVo(itemsForThisCat); // 塞入品項
+			        filteredCategories.add(cat);    // 加入過濾後的清單
+			    }
 			}
-
+			res.setMenuCategoriesVoList(filteredCategories);	//重新覆蓋
 			return res;
 
 		} catch (Exception e) {
