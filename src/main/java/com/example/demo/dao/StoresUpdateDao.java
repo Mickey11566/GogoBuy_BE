@@ -83,7 +83,7 @@ public interface StoresUpdateDao extends JpaRepository<Stores, Integer> {
 	// 標記有訂單的菜單品項為不可用 (is_available = false，避免 FK 衝突，並阻止新團購選用)
 	@Modifying
 	@Transactional
-	@Query(value = "UPDATE menu SET is_deleted = false WHERE stores_id = ?1 AND id IN (SELECT DISTINCT menu_id FROM orders WHERE is_deleted = false)", nativeQuery = true)
+	@Query(value = "UPDATE menu SET is_deleted = true WHERE stores_id = ?1 AND id IN (SELECT DISTINCT menu_id FROM orders WHERE is_deleted = false)", nativeQuery = true)
 	public void markOrderedMenuItemsUnavailable(int storeId);
 
 	// 根據店家id刪除菜單分類 (如果分類內已無品項則刪除，否則保留)
