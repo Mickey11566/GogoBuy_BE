@@ -32,7 +32,7 @@ public interface StoresSearchDao extends JpaRepository<Stores, Integer> {
 	@Query(value = "SELECT id, stores_id as storesId, week, open_time as openTime, close_time as closeTime FROM store_operating_hours WHERE stores_id = ?1", nativeQuery = true)
 	public List<Map<String, Object>> getOperatingHoursByStoreId(int storeId);
 
-	// 取得菜單品項++
+	// 取得菜單品項
 	@Query(value = "SELECT stores_id as storesId, id, category_id as categoryId, name, description, base_price as basePrice, image, is_available as available, unusual FROM menu WHERE stores_id = ?1 and is_deleted = false", nativeQuery = true)
 	public List<Map<String, Object>> getMenuByStoreId(int storeId);
 
@@ -52,8 +52,8 @@ public interface StoresSearchDao extends JpaRepository<Stores, Integer> {
 	@Query(value = "SELECT * FROM menu WHERE id IN (?1)", nativeQuery = true)
 	public Menu getMenuByMenuId(int menuId);
 
-	// (給EVENT) 依值搜尋(多個)品項 ++
-	@Query(value = "SELECT * FROM menu WHERE id IN (?1) and is_deleted = false", nativeQuery = true)
+	// (給EVENT) 依值搜尋(多個)品項
+	@Query(value = "SELECT * FROM menu WHERE id IN (?1)", nativeQuery = true)
 	public List<Menu> getMenuByMenuId(List<Integer> menuId);
 
 	// 用 storeId 取得地址
@@ -61,6 +61,7 @@ public interface StoresSearchDao extends JpaRepository<Stores, Integer> {
 	public String findAddressByStoreId(int id);
 
 	// 找飯店(? (附近)
+
 	@Query(value = "SELECT * FROM (" + "  SELECT id, name, address, phone, image, category, "
 			+ "  ROUND((6371 * acos(cos(radians(:lat)) * cos(radians(lat)) * cos(radians(lng) - radians(:lng)) "
 			+ "  + sin(radians(:lat)) * sin(radians(lat)))), 3) AS distance " //
