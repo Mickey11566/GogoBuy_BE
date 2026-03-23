@@ -11,7 +11,6 @@ import org.springframework.util.CollectionUtils;
 
 import com.example.demo.constants.SalesStatsType;
 import com.example.demo.dao.StoresSearchDao;
-import com.example.demo.entity.SalesStats;
 import com.example.demo.projection.SalesLeaderboardProjection;
 import com.example.demo.repository.SalesStatsRepository;
 import com.example.demo.response.SalesStatsRes;

@@ -25,7 +25,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.constants.ResMessage;
-import com.example.demo.dao.MenuCategoryRepository;
+import com.example.demo.dao.MenuCategoryDao;
 import com.example.demo.dao.ProductOptionGroupsDao;
 import com.example.demo.dao.StoresCreateDao;
 import com.example.demo.dao.StoresSearchDao;
@@ -79,7 +79,10 @@ public class StoreService {
 	private GoogleMapService googleMapService;
 
 	@Autowired
-	private MenuCategoryRepository menuCategoryRepository;
+	private MenuCategoryDao menuCategoryRepository;
+
+	@Autowired
+	private WishService wishService;
 
 	// Spring 會自動從 application.properties 抓取對應的值注入到變數
 	@Value("${gemini.api.key}")
@@ -92,9 +95,9 @@ public class StoreService {
 	 * 以下為檢查邏輯
 	 */
 
-//	店家
+	// 店家
 	private void checkStore(StoresReq req) throws Exception {
-//		電話
+		// 電話
 		// 先處理字串：移除所有橫線，並過濾掉空白（避免前端傳入 "02- 123" 這種狀況）
 		String purePhone = req.getPhone() == null ? "" : req.getPhone().replace("-", "").trim();
 
@@ -113,11 +116,11 @@ public class StoreService {
 		if (!purePhone.matches("^0\\d{8,9}$")) {
 			throw new Exception(ResMessage.PHONE_SIZE_ERROR.getMessage());
 		}
-//	  	category類型驗證
+		// category類型驗證
 		if (!(req.getCategory().equals("fast") || req.getCategory().equals("slow"))) {
 			throw new Exception(ResMessage.CATEGORY_ERROR.getMessage());
 		}
-//		檢查運費級距
+		// 檢查運費級距
 		if (!CollectionUtils.isEmpty(req.getFee_description())) {
 			for (FeeDescriptionVo vo : req.getFee_description()) {
 				if (vo.getKm() < 0 || vo.getFee() < 0)
@@ -133,7 +136,7 @@ public class StoreService {
 		}
 	}
 
-//時刻
+	// 時刻
 	private void checkHours(List<StoreOperatingHoursVo> list) throws Exception {
 		if (CollectionUtils.isEmpty(list))
 			return;
@@ -147,15 +150,15 @@ public class StoreService {
 			} catch (DateTimeParseException e) {
 				// 如果格式不對 (例如 25:00 或 12:70) 會進到這裡
 				throw new Exception("時間格式錯誤喵!，請使用 HH:mm 格式喵! (例如 09:00)");
-//		子類別
+				// 子類別
 			} catch (DateTimeException e) {
 				throw new Exception("無效的星期數值喵!: " + vo.getWeek());
-//		父類別
+				// 父類別
 			}
 		}
 	}
 
-//品項
+	// 品項
 	private void checkMenu(StoresReq req) throws Exception {
 		List<MenuCategoriesVo> categoriesList = req.getMenuCategoriesVoList();
 		List<ProductOptionGroupsVo> groupList = req.getProductOptionGroupsVoList();
@@ -224,7 +227,7 @@ public class StoreService {
 		}
 	}
 
-//選項(群組)
+	// 選項(群組)
 	private void checkOptions(List<ProductOptionGroupsVo> groupList) throws Exception {
 		if (CollectionUtils.isEmpty(groupList))
 			return;
@@ -246,13 +249,13 @@ public class StoreService {
 
 	@Transactional(rollbackFor = Exception.class)
 	public void saveSubTables(int storeId, StoresReq req) throws JsonProcessingException {
-//		填入營業時間
+		// 填入營業時間
 		List<StoreOperatingHoursVo> operatingHoursvoList = req.getOperatingHoursVoList();
 		for (StoreOperatingHoursVo vo : operatingHoursvoList) {
 			storesCreateDao.addOperatingHours(storeId, vo.getWeek(), vo.getOpenTime(), vo.getCloseTime());
 		}
 
-//		填入選項群組
+		// 填入選項群組
 		List<ProductOptionGroupsVo> ProductOptionGroupsVoList = req.getProductOptionGroupsVoList();
 		Map<String, Integer> idMap = new HashMap<>();
 		for (ProductOptionGroupsVo vo : ProductOptionGroupsVoList) {
@@ -273,9 +276,10 @@ public class StoreService {
 				idMap.put(String.valueOf(vo.getId()), group.getId());
 			}
 
-//			storesCreateDao.addOptionGroups(storeId, vo.getName(), vo.isRequired(), vo.getMaxSelection());
-//			int groupId = storesCreateDao.getLastInsertId();
-//		填入選項
+			// storesCreateDao.addOptionGroups(storeId, vo.getName(), vo.isRequired(),
+			// vo.getMaxSelection());
+			// int groupId = storesCreateDao.getLastInsertId();
+			// 填入選項
 			List<ProductOptionItemsVo> itemVoList = vo.getItems();
 			if (!CollectionUtils.isEmpty(itemVoList)) {
 				for (ProductOptionItemsVo itemVo : itemVoList) {
@@ -301,9 +305,10 @@ public class StoreService {
 					List<Map<Integer, String>> finalUnusual = new ArrayList<>();
 
 					if (menuVo.getUnusual() instanceof List) {
-						List<Map<String, String>> rawUnusual = 
-						mapper.convertValue(menuVo.getUnusual(), new TypeReference<List<Map<String, String>>>() {});
-//								(List<Map<String, String>>) menuVo.getUnusual();
+						List<Map<String, String>> rawUnusual = mapper.convertValue(menuVo.getUnusual(),
+								new TypeReference<List<Map<String, String>>>() {
+								});
+						// (List<Map<String, String>>) menuVo.getUnusual();
 						for (Map<String, String> entry : rawUnusual) {
 							for (Map.Entry<String, String> e : entry.entrySet()) {
 								String tempId = e.getKey();
@@ -321,7 +326,8 @@ public class StoreService {
 
 					// 傳入剛剛拿到的 realCategoryId
 					storesCreateDao.addMenu(storeId, realCategoryId, menuVo.getName(), menuVo.getDescription(),
-							menuVo.getBasePrice(), menuVo.getImage(), menuVo.isAvailable(), unusualStr);
+							menuVo.getBasePrice(), menuVo.getImage(), menuVo.isAvailable(), unusualStr,
+							menuVo.isDeleted());
 
 					// 處理圖片確認menuVo.getImage() != null && !menuVo.getImage().isEmpty()
 					if (StringUtils.hasText(menuVo.getImage())) {
@@ -332,24 +338,26 @@ public class StoreService {
 		}
 	}
 
-////		填入品項
-//		List<MenuVo> menuVoList = req.getMenuVoList();
-//		for (MenuVo vo : menuVoList) {
-//			//	空值防呆		
-//			Object unusualObj = vo.getUnusual() != null ? vo.getUnusual() : new ArrayList<>();
-//			String unusualStr = mapper.writeValueAsString(unusualObj);
-//			storesCreateDao.addMenu(storeId, vo.getCategoryId(), vo.getName(), vo.getDescription(), //
-//					vo.getBasePrice(), vo.getImage(), vo.isAvailable(), unusualStr);
-//			if (vo.getImage() != null && !vo.getImage().isEmpty()) {
-//	            imageService.confirmImage(vo.getImage());
-//	        }
-//		}
-////		填入品項類別
-//		List<MenuCategoriesVo> MenuCategoriesVoList = req.getMenuCategoriesVoList();
-//		for (MenuCategoriesVo vo : MenuCategoriesVoList) {
-//			String priceLevelListStr = mapper.writeValueAsString(vo.getPriceLevel());
-//			storesCreateDao.addCategory(storeId, vo.getName(), priceLevelListStr);
-//		}
+	//// 填入品項
+	// List<MenuVo> menuVoList = req.getMenuVoList();
+	// for (MenuVo vo : menuVoList) {
+	// // 空值防呆
+	// Object unusualObj = vo.getUnusual() != null ? vo.getUnusual() : new
+	//// ArrayList<>();
+	// String unusualStr = mapper.writeValueAsString(unusualObj);
+	// storesCreateDao.addMenu(storeId, vo.getCategoryId(), vo.getName(),
+	//// vo.getDescription(), //
+	// vo.getBasePrice(), vo.getImage(), vo.isAvailable(), unusualStr);
+	// if (vo.getImage() != null && !vo.getImage().isEmpty()) {
+	// imageService.confirmImage(vo.getImage());
+	// }
+	// }
+	//// 填入品項類別
+	// List<MenuCategoriesVo> MenuCategoriesVoList = req.getMenuCategoriesVoList();
+	// for (MenuCategoriesVo vo : MenuCategoriesVoList) {
+	// String priceLevelListStr = mapper.writeValueAsString(vo.getPriceLevel());
+	// storesCreateDao.addCategory(storeId, vo.getName(), priceLevelListStr);
+	// }
 
 	private void getLatLng(Stores store, String address) throws Exception {
 		// 呼叫 Service 取得結果
@@ -386,7 +394,7 @@ public class StoreService {
 	}
 
 	// 回滾
-//	創建店家
+	// 創建店家
 	@Transactional(rollbackFor = Exception.class)
 	public BasicRes create(StoresReq req) throws Exception {
 
@@ -395,10 +403,10 @@ public class StoreService {
 		checkMenu(req);
 		checkOptions(req.getProductOptionGroupsVoList());
 
-//    店家已存在
+		// 店家已存在
 		if (storesCreateDao.existsByPhone(req.getPhone()) > 0) {
-//			防孤兒圖片
-			if(StringUtils.hasText(req.getImage())) {
+			// 防孤兒圖片
+			if (StringUtils.hasText(req.getImage())) {
 				imageService.deleteImage(req.getImage());
 			}
 
@@ -406,7 +414,7 @@ public class StoreService {
 					ResMessage.STORE_EXISTS.getMessage());
 		}
 
-//		傳店家表取店家ID
+		// 傳店家表取店家ID
 		Stores store = new Stores();
 		String feeStr = mapper.writeValueAsString(req.getFee_description());
 
@@ -421,24 +429,33 @@ public class StoreService {
 		store.setPublish(req.isPublish());
 		store.setCreatedBy(req.getCreatedBy());
 
-//		由地址取得經緯度
+		// 由地址取得經緯度
 		getLatLng(store, req.getAddress());
 
 		store = storesCreateDao.save(store);
 
-//		storesCreateDao.addStore(req.getStoresname(), req.getPhone(), req.getAddress(), //
-//				req.getCategory(), req.getType(), req.getMemo(), //
-//				req.getImage(), feeStr, req.isPublish(), req.getCreatedBy());
+		// storesCreateDao.addStore(req.getStoresname(), req.getPhone(),
+		// req.getAddress(), //
+		// req.getCategory(), req.getType(), req.getMemo(), //
+		// req.getImage(), feeStr, req.isPublish(), req.getCreatedBy());
 
 		int storeId = store.getId();
 
-//		填入子表
+		// 填入子表
 		saveSubTables(storeId, req);
 
-//		更改圖片標籤
+		// 更改圖片標籤
 		if (StringUtils.hasText(req.getImage())) {
 			System.out.println("準備確認圖片路徑: " + req.getImage());
 			imageService.confirmImage(req.getImage());
+		}
+
+		// 檢查是否有對應的願望，並送出通知
+		try {
+			wishService.realizeWishesByStoreName(req.getStoresname(), storeId);
+		} catch (Exception e) {
+			System.err.println(
+					"Failed to realize matching wishes for store " + req.getStoresname() + ": " + e.getMessage());
 		}
 
 		return new BasicRes(ResMessage.SUCCESS.getCode(), //
@@ -557,7 +574,7 @@ public class StoreService {
 				ResMessage.SUCCESS.getMessage());
 	}
 
-//		物理全刪
+	// 物理全刪
 	@Transactional(rollbackFor = Exception.class)
 	public BasicRes deleteFullStore(int storeId) throws Exception {
 		// 檢查店是否存在
@@ -594,7 +611,7 @@ public class StoreService {
 		}
 	}
 
-//		軟刪除
+	// 軟刪除
 	@Transactional(rollbackFor = Exception.class)
 	public BasicRes deleteStore(int storeId) throws Exception {
 		checkStoreExist(storeId);
@@ -691,7 +708,10 @@ public class StoreService {
 				}
 				menuVoList.add(mVo);
 			}
-			res.setMenuVoList(menuVoList);
+
+			// 測試BUG
+
+			// res.setMenuVoList(menuVoList);
 
 			// 選項群組與細項 (兩層巢狀)
 			List<Map<String, Object>> groupsMap = storesSearchDao.getOptionGroupsByStoreId(storesId);
@@ -714,6 +734,8 @@ public class StoreService {
 						});
 				res.setFeeDescriptionVoList(fees);
 			}
+			// 拿來記錄有東西的類別
+			List<MenuCategoriesVo> filteredCategories = new ArrayList<>();
 
 			for (MenuCategoriesVo cat : categoriesVoList) {
 				List<MenuVo> itemsForThisCat = new ArrayList<>();
@@ -722,9 +744,13 @@ public class StoreService {
 						itemsForThisCat.add(item);
 					}
 				}
-				cat.setMenuVo(itemsForThisCat); // 把屬於該類別的品項塞進去
-			}
 
+				if (!itemsForThisCat.isEmpty()) {
+					cat.setMenuVo(itemsForThisCat); // 塞入品項
+					filteredCategories.add(cat); // 加入過濾後的清單
+				}
+			}
+			res.setMenuCategoriesVoList(filteredCategories); // 重新覆蓋
 			return res;
 
 		} catch (Exception e) {
@@ -732,7 +758,7 @@ public class StoreService {
 		}
 	}
 
-//	取得全部店家
+	// 取得全部店家
 	public StoresRes getAllStores() {
 
 		List<Stores> storesList = storesSearchDao.getAllStores();
@@ -743,13 +769,13 @@ public class StoreService {
 		return new StoresRes(ResMessage.SUCCESS.getCode(), "共" + storesList.size() + "筆資料喵!", storesList);
 	}
 
-//	AI填菜單
+	// AI填菜單
 	//
 
 	public String callGeminiApi(byte[] imageBytes) throws Exception {
 
 		// 1. 強制等待，避免觸發配額限制
-//		Thread.sleep(2000);
+		// Thread.sleep(2000);
 
 		// 2. 壓縮圖片
 		byte[] processedImage = compressImage(imageBytes);
@@ -853,7 +879,7 @@ public class StoreService {
 		}
 	}
 
-//	壓縮
+	// 壓縮
 	private byte[] compressImage(byte[] imageBytes) throws Exception {
 		try {
 
@@ -878,7 +904,7 @@ public class StoreService {
 		}
 	}
 
-//	O公里內店家
+	// O公里內店家
 
 	public StoresRes getNearbyStores(Double lat, Double lng, String address, double radius) {
 		try {
@@ -910,7 +936,7 @@ public class StoreService {
 	}
 
 	private int categoryReturnId(int storeId, String name, String priceLevel) {
-		MenuCategories categories = new MenuCategories(); 
+		MenuCategories categories = new MenuCategories();
 		categories.setStoreId(storeId);
 		categories.setName(name);
 		categories.setPriceLevel(priceLevel);
@@ -920,33 +946,30 @@ public class StoreService {
 
 		return categories.getId();
 	}
-	
+
 	public StoresRes getOperatingStores(StoresReq req) {
-	    if (CollectionUtils.isEmpty(req.getFilteredStoreIds())) {
-	        return new StoresRes(200, "無篩選範圍內的店家喵！");
-	    }
-	    try {
-	        LocalDateTime ldt = LocalDateTime.now();
-	        LocalTime now = ldt.toLocalTime();
-	        
-	        int dayOfWeek = ldt.getDayOfWeek().getValue(); 
+		if (CollectionUtils.isEmpty(req.getFilteredStoreIds())) {
+			return new StoresRes(200, "無篩選範圍內的店家喵！");
+		}
+		try {
+			LocalDateTime ldt = LocalDateTime.now();
+			LocalTime now = ldt.toLocalTime();
 
-	        List<Map<String, Object>> storeList = storesSearchDao.findOperatingStoresByIds(
-	                req.getFilteredStoreIds(), 
-	                now, 
-	                dayOfWeek
-	        );
+			int dayOfWeek = ldt.getDayOfWeek().getValue();
 
-	        if (CollectionUtils.isEmpty(storeList)) {
-	            return new StoresRes(404, "所選店家目前皆非營業時間(或今日公休)喵！");
-	        }
+			List<Map<String, Object>> storeList = storesSearchDao.findOperatingStoresByIds(req.getFilteredStoreIds(),
+					now, dayOfWeek);
 
-	        StoresRes res = new StoresRes(200, "搜尋成功喵！共 " + storeList.size() + " 筆喵！");
-	        res.setStoreOperatingList(storeList);
-	        return res;
-	    } catch (Exception e) {
-	        return new StoresRes(500, "系統錯誤喵...: " + e.getMessage());
-	    }
+			if (CollectionUtils.isEmpty(storeList)) {
+				return new StoresRes(404, "所選店家目前皆非營業時間(或今日公休)喵！");
+			}
+
+			StoresRes res = new StoresRes(200, "搜尋成功喵！共 " + storeList.size() + " 筆喵！");
+			res.setStoreOperatingList(storeList);
+			return res;
+		} catch (Exception e) {
+			return new StoresRes(500, "系統錯誤喵...: " + e.getMessage());
+		}
 	}
 
 }

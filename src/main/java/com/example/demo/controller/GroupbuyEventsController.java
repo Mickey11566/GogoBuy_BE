@@ -61,21 +61,24 @@ public class GroupbuyEventsController {
 	// 透過店家ID取得對應菜單
 	@GetMapping("gogobuy/event/getGroupbuyEventByStoresId")
 	public GroupbuyEventsRes getGroupbuyEventByStoresId(
-			@RequestParam(name = "stores_id", required = false) int storesId) {
-		return groupbuyEventsService.getGroupbuyEventByStoresId(storesId);
+			@RequestParam(name = "stores_id", required = false) int storesId,
+			@RequestParam(name = "current_user_id", required = false) String currentUserId) {
+		return groupbuyEventsService.getGroupbuyEventByStoresId(storesId, currentUserId);
 	}
 
 	// 查詢全部開團
 	@GetMapping("gogobuy/event/getAll")
-	public GroupbuyEventsRes getAll() {
-		return groupbuyEventsService.getAll();
+	public GroupbuyEventsRes getAll(
+			@RequestParam(name = "current_user_id", required = false) String currentUserId) {
+		return groupbuyEventsService.getAll(currentUserId);
 	}
 
 	// 暱稱查詢開團紀錄
 	@GetMapping("gogobuy/event/getGroupbuyEventByNickname")
 	public GroupbuyEventsRes getGroupbuyEventByNickname(
-			@RequestParam(name = "host_nickname", required = false) String hostNickname) {
-		return groupbuyEventsService.getGroupbuyEventByNickname(hostNickname);
+			@RequestParam(name = "host_nickname", required = false) String hostNickname,
+			@RequestParam(name = "current_user_id", required = false) String currentUserId) {
+		return groupbuyEventsService.getGroupbuyEventByNickname(hostNickname, currentUserId);
 	}
 
 	// 用google取經緯度
@@ -93,8 +96,10 @@ public class GroupbuyEventsController {
 
 	// 透過 活動Id 取得 events
 	@GetMapping("gogobuy/event/getEventsByEventsId")
-	public GroupbuyEventsRes getEventsByEventsId(@Valid @RequestParam(name = "id") int id) {
-		return groupbuyEventsService.getEventsByEventsId(id);
+	public GroupbuyEventsRes getEventsByEventsId(
+			@Valid @RequestParam(name = "id") int id,
+			@RequestParam(name = "current_user_id", required = false) String currentUserId) {
+		return groupbuyEventsService.getEventsByEventsId(id, currentUserId);
 	}
 
 	// 物理全刪(只有團)

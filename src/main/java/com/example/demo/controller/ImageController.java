@@ -17,24 +17,24 @@ import com.example.demo.service.ImageService;
 
 @RestController
 @RequestMapping("/image")
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin
 public class ImageController {
 
     @Autowired
     private ImageService imageService;
 
     private final List<String> ALLOWED_TYPES = List.of("avatars", "stores", "menu");
-    
+
     @PostMapping("/upload/{type}")
     public String upload(
-    		@PathVariable("type") String type, @RequestParam("file") MultipartFile file) throws IOException {
-    	
-    	if (!ALLOWED_TYPES.contains(type)) {
-    		throw new IllegalArgumentException("不支援的上傳類型喵");
-    	}
+            @PathVariable("type") String type, @RequestParam("file") MultipartFile file) throws IOException {
+
+        if (!ALLOWED_TYPES.contains(type)) {
+            throw new IllegalArgumentException("不支援的上傳類型喵");
+        }
         return imageService.uploadImage(file, type);
     }
-    
+
     @PostMapping("/cleanup")
     public BasicRes cleanup() {
         try {

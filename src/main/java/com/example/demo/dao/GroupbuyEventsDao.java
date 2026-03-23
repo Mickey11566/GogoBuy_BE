@@ -33,6 +33,10 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	@Query(value = "select count(*) from groupbuy_events where host_id = ?1 and stores_id = ?2 and status = 'OPEN' and is_deleted = false", nativeQuery = true)
 	public int checkEvnet(String hostId, int storesId);
 
+	// 看所有開團活動
+	@Query(value = "select e.*, u.nickname AS nickname from groupbuy_events e JOIN user u ON e.host_id = u.id where e.status = 'OPEN' and e.is_deleted = false", nativeQuery = true)
+	public List<GroupbuyEventsProjection> getAllEvent();
+
 	// 查所屬團ID
 	@Query(value = "select* from groupbuy_events where id = ?1", nativeQuery = true)
 	public GroupbuyEvents findById(int id);
@@ -67,10 +71,10 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	public int autoUpdateEventsStatus(String targetStatus, LocalDateTime now, String currentStatus);
 
 	// 先刪子表再刪主表(這個是要接API的刪除)
-	//軟刪
+	// 軟刪
 	@Transactional
 	@Modifying
-	@Query(value = "update is_deleted = true from groupbuy_events where id = ?1 ", nativeQuery = true)
+	@Query(value = "update groupbuy_events set is_deleted = true where id = ?1 ", nativeQuery = true)
 	public int fakeDelete(int eventsId);
 
 	// 用 hostId 檢索主表
@@ -81,25 +85,21 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	@Query(value = "select * from menu where stores_id = ?1 ", nativeQuery = true)
 	public List<Menu> getMenuByStoresId(int storesId);
 
-	// 查詢全部的開團
-	@Query(value = "SELECT e.*, u.nickname AS nickname FROM groupbuy_events e JOIN user u ON e.host_id = u.id", nativeQuery = true)
-	public List<GroupbuyEventsProjection> getAll();
+	// 查詢全部的開團 (包含已結束，不包含已刪除)，過濾黑名單
+	@Query(value = "SELECT e.*, u.nickname AS nickname FROM groupbuy_events e JOIN user u ON e.host_id = u.id WHERE e.is_deleted = false "
+			+ "AND e.host_id NOT IN (SELECT b.user_id FROM blacklist b WHERE b.blocked_user_id = :currentUserId) ORDER BY e.id DESC", nativeQuery = true)
+	public List<GroupbuyEventsProjection> getAll(@Param("currentUserId") String currentUserId);
 
-	// eventsId 查詢 event
-	// @Query(value = "select * from groups_search_view where event_id = ?1 and
-	// is_deleted = false", nativeQuery = true)
-	// public List<GroupsSearchView> getEventsByEventsId(int id);
+	// eventsId 查詢 event，過濾黑名單
+	@Query(value = "select * from groups_search_view where event_id = :eventId "
+			+ "AND host_id NOT IN (SELECT b.user_id FROM blacklist b WHERE b.blocked_user_id = :currentUserId)", nativeQuery = true)
+	public List<GroupsSearchView> getEventsByEventsId(@Param("eventId") int eventId, @Param("currentUserId") String currentUserId);
 
-	@Query(value = "select * from groups_search_view where event_id = ?1 ", nativeQuery = true)
-	public List<GroupsSearchView> getEventsByEventsId(int eventId);
-
-	// @Query(value = "SELECT * FROM groupbuy_events WHERE id = ?1 AND is_deleted =
-	// false", nativeQuery = true)
-	// public List<GroupbuyEvents> getEventsByEventsId1(int id);
-
-	// 用店家Id找符合的團
-	@Query(value = "select * from groupbuy_events where stores_id = ?1 and is_deleted = false ", nativeQuery = true)
-	public List<GroupbuyEvents> getGroupbuyEventByStoresId(int storesId);
+	// 用店家Id找符合的團，過濾黑名單
+	@Query(value = "select * from groupbuy_events where stores_id = :storesId and is_deleted = false "
+			+ "AND host_id NOT IN (SELECT b.user_id FROM blacklist b WHERE b.blocked_user_id = :currentUserId)", nativeQuery = true)
+	public List<GroupbuyEvents> getGroupbuyEventByStoresId(@Param("storesId") int storesId,
+			@Param("currentUserId") String currentUserId);
 
 	// 查詢運費狀態
 	@Query(value = "select split_type from groupbuy_events where id = ?1 and is_deleted = false ", nativeQuery = true)
@@ -114,10 +114,10 @@ public interface GroupbuyEventsDao extends JpaRepository<GroupbuyEvents, Integer
 	@Modifying
 	@Query(value = "delete from groupbuy_events where id = ?1", nativeQuery = true)
 	public int deleteEvent(int id);
-	
+
 	// 軟刪除
 	@Modifying
-	@Query(value = "update is_deleted = true from groupbuy_events where id = ?1", nativeQuery = true)
+	@Query(value = "update groupbuy_events SET is_deleted = true where id = ?1", nativeQuery = true)
 	public int fakeDeleteEvent(int id);
 
 	// 查詢全部的映射表

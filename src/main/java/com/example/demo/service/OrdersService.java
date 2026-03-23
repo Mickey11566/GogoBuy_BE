@@ -181,34 +181,33 @@ public class OrdersService {
 			int basePrice = menu.getBasePrice();
 			int specPrice = 0;
 			String targetSpecName = item.getSpecName();
-			
+
 			String categoryJson = storesSearchDao.getPriceLevelByMenuId(item.getMenuId());
 			specPrice += findPriceInJson(categoryJson, targetSpecName);
-			
+
 			// 解析規格價格 (unusual 欄位)
 			String unusualJson = menu.getUnusual();
-	        specPrice += findPriceInJson(unusualJson, targetSpecName);
+			specPrice += findPriceInJson(unusualJson, targetSpecName);
 
 			String menuName = menu.getName();
 
-
-//			// 確保 unusualJson 不是 null 且前端有傳規格名稱才進行解析
-//			if (StringUtils.hasText(unusualJson) && item.getSpecName() != null) {
-//				try {
-//					List<Map<String, Object>> specs = mapper.readValue(unusualJson,
-//							new TypeReference<List<Map<String, Object>>>() {
-//							});
-//					for (Map<String, Object> spec : specs) {
-//						if (item.getSpecName().equals(spec.get("name"))) {
-//							// 使用 Number 轉型更安全，可以同時處理 Integer 或 Long
-//							specPrice = ((Number) spec.get("price")).intValue();
-//							break;
-//						}
-//					}
-//				} catch (Exception jsonEx) {
-//					System.out.println("JSON 解析規格失敗，跳過規格加價: " + jsonEx.getMessage());
-//				}
-//			}
+			// // 確保 unusualJson 不是 null 且前端有傳規格名稱才進行解析
+			// if (StringUtils.hasText(unusualJson) && item.getSpecName() != null) {
+			// try {
+			// List<Map<String, Object>> specs = mapper.readValue(unusualJson,
+			// new TypeReference<List<Map<String, Object>>>() {
+			// });
+			// for (Map<String, Object> spec : specs) {
+			// if (item.getSpecName().equals(spec.get("name"))) {
+			// // 使用 Number 轉型更安全，可以同時處理 Integer 或 Long
+			// specPrice = ((Number) spec.get("price")).intValue();
+			// break;
+			// }
+			// }
+			// } catch (Exception jsonEx) {
+			// System.out.println("JSON 解析規格失敗，跳過規格加價: " + jsonEx.getMessage());
+			// }
+			// }
 			int totalExtraPrice = 0;
 			List<Map<String, Object>> opListPrice = item.getSelectedOptionList();
 			if (opListPrice != null) {
@@ -230,21 +229,23 @@ public class OrdersService {
 			return new OrdersRes(500, "商品 " + item.getMenuId() + " 金額計算失敗: " + e.getMessage(), 0);
 		}
 	}
-	
-	//	輔助解析
+
+	// 輔助解析
 	private int findPriceInJson(String json, String targetName) {
-	    if (!StringUtils.hasText(json) || targetName == null) return 0;
-	    try {
-	        List<Map<String, Object>> specs = mapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
-	        for (Map<String, Object> spec : specs) {
-	            if (targetName.equals(spec.get("name"))) {
-	                return ((Number) spec.get("price")).intValue();
-	            }
-	        }
-	    } catch (Exception e) {
-	        System.err.println("解析 JSON 失敗: " + e.getMessage());
-	    }
-	    return 0;
+		if (!StringUtils.hasText(json) || targetName == null)
+			return 0;
+		try {
+			List<Map<String, Object>> specs = mapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {
+			});
+			for (Map<String, Object> spec : specs) {
+				if (targetName.equals(spec.get("name"))) {
+					return ((Number) spec.get("price")).intValue();
+				}
+			}
+		} catch (Exception e) {
+			System.err.println("解析 JSON 失敗: " + e.getMessage());
+		}
+		return 0;
 	}
 
 	// 新增
@@ -263,8 +264,9 @@ public class OrdersService {
 				// 金額計算
 				OrdersRes subtotalRes = getSubtotal(item);
 				if (subtotalRes.getCode() != 200) {
-//					throw new RuntimeException("商品 " + item.getMenuId() + " 金額計算失敗");
-					return new BasicRes(subtotalRes.getCode(), "商品 " + item.getMenuId() + " 金額計算失敗 "+ subtotalRes.getMessage());
+					// throw new RuntimeException("商品 " + item.getMenuId() + " 金額計算失敗");
+					return new BasicRes(subtotalRes.getCode(),
+							"商品 " + item.getMenuId() + " 金額計算失敗 " + subtotalRes.getMessage());
 				}
 
 				// 快照欄位
@@ -362,14 +364,17 @@ public class OrdersService {
 		if (!StringUtils.hasText(userId) || eventsId <= 0) {
 			return new BasicRes(400, "請提供正確的使用者 ID 與團購 ID");
 		}
-		
+
 		GroupbuyEvents event = groupbuyEventsDao.findById(eventsId);
 		int deleteRow = ordersDao.deleteOrderByUserIdAndEventsId(userId, eventsId);
 		// 判斷處理結果
 		if (deleteRow == 0) {
 			return new BasicRes(404, "在此團購中找不到該使用者的有效訂單");
 		}
-		
+
+		// 順便刪除對應的結算單 (因為沒訂單了，結算也沒意義)
+		personalOrderDao.deleteByEventsIdAndUserId(eventsId, userId);
+
 		// 如果是團長刪除成員訂單，發送通知 (僅限站內)
 		if (StringUtils.hasText(actingUserId) && !actingUserId.equals(userId)) {
 			if (event != null && actingUserId.equals(event.getHostId())) {
@@ -382,16 +387,16 @@ public class OrdersService {
 					notifyReq.setUserId(actingUserId);
 					notifyReq.setEventId(eventsId);
 					notifyReq.setExpiredAt(LocalDate.now().plusDays(30).toString());
-					
+
 					UserNotificationVo vo = new UserNotificationVo();
 					vo.setUserId(userId);
 					// 刪除訂單暫時不發 email，如需發送則取消註釋
 					/*
-					User targetUser = userDao.getUserById(userId);
-					if (targetUser != null) vo.setEmail(targetUser.getEmail());
-					*/
+					 * User targetUser = userDao.getUserById(userId);
+					 * if (targetUser != null) vo.setEmail(targetUser.getEmail());
+					 */
 					notifyReq.setUserNotificationVoList(Collections.singletonList(vo));
-					
+
 					messagesService.create(notifyReq);
 				} catch (Exception ne) {
 					System.err.println("Failed to send order delete notification: " + ne.getMessage());
@@ -487,6 +492,12 @@ public class OrdersService {
 			responseDto.setPersonalMemo(orderInfo.getPersonalMemo());
 			responseDto.setWeight(orderInfo.getWeight());
 
+			// 取得支付狀態 (用來判斷訂單是否已被成員確認)
+			PersonalOrder po = personalOrderDao.findByEventsIdAndUserId(eventsId, userId);
+			if (po != null) {
+				responseDto.setPaymentStatus(po.getPaymentStatus());
+			}
+
 			List<OrderMenuVo> menuList = new ArrayList<>();
 			for (Orders order : ordersList) {
 				OrderMenuVo item = new OrderMenuVo();
@@ -537,7 +548,8 @@ public class OrdersService {
 						NotifiMesReq notifyReq = new NotifiMesReq();
 						notifyReq.setCategory(NotifiCategoryEnum.GROUP_BUY);
 						notifyReq.setTitle("訂單品項已移除");
-						notifyReq.setContent("團長幫您從團購「" + event.getEventName() + "」中移除了品項：「" + order.getMenuName() + "」。");
+						notifyReq.setContent(
+								"團長幫您從團購「" + event.getEventName() + "」中移除了品項：「" + order.getMenuName() + "」。");
 						notifyReq.setTargetUrl("/user/orders");
 						notifyReq.setUserId(actingUserId);
 						notifyReq.setEventId(order.getEventsId());
@@ -592,10 +604,19 @@ public class OrdersService {
 						dto.setEventStatus(event.getStatus());
 						dto.setEventPickupTime(event.getPickupTime());
 
-						// Determine status label based on event status and pickup status
 						String statusLabel = "進行中";
+						PersonalOrder personalOrder = personalOrderDao.findByEventsIdAndUserId(eventId, userId);
+
 						if (order.getPickupStatus() == PickupStatusEnum.PICKED_UP) {
 							statusLabel = "已完成";
+						} else if (personalOrder != null) {
+							if (personalOrder.getPaymentStatus() == PaymentStatus.SUBMITTED) {
+								statusLabel = "待結單";
+							} else if (personalOrder.getPaymentStatus() == PaymentStatus.UNPAID) {
+								statusLabel = "待付款";
+							} else if (event.getStatus() == GroupbuyStatusEnum.FINISHED) {
+								statusLabel = "待取餐";
+							}
 						} else if (event.getStatus() == GroupbuyStatusEnum.FINISHED) {
 							statusLabel = "待取餐";
 						}

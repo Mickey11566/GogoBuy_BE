@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,10 +42,10 @@ public class UserService {
 
 	@Autowired
 	private UserDao userDao;
-	
+
 	@Autowired
 	private StoresSearchDao storesSrerchDao;
-	
+
 	@Autowired
 	private JavaMailSender mailSender;
 
@@ -53,6 +54,9 @@ public class UserService {
 
 	@Autowired
 	private JwtService jwtService;
+
+	@Value("${app.frontend.url}")
+	private String frontendUrl;
 
 	/**
 	 * Redis發送修改email驗證碼功能 暫時用不到
@@ -72,7 +76,7 @@ public class UserService {
 		String password = req.getPassword();
 		String name = req.getNickname();
 		String phone = req.getPhone();
-		String status = UserStatusEnum.PENDING_ACTIVE.name();
+		String status = "pending_active"; // 使用小寫以確保與登入邏輯一致
 		int res = userDao.addUser(uniqueID, email, encoder.encode(password), name, phone, status);
 		if (res == 1) {
 			// 發送開通驗證信
@@ -92,8 +96,8 @@ public class UserService {
 		// 生成 JWT Token
 		String token = jwtService.createActivationToken(userId);
 
-		// 生成開通連結 (以前端 Angular 跑在 4200 port)
-		String activationUrl = "http://localhost:4200/active-account?token=" + token + "\n\n連結將於1小時後失效。";
+		String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+		String activationUrl = baseUrl + "#/active-account?token=" + token;
 
 		try {
 			// 執行發送郵件
@@ -101,7 +105,7 @@ public class UserService {
 			message.setFrom("GogobuyAdmin@gmail.com");
 			message.setTo(email);
 			message.setSubject("[GoGoBuy] 帳號開通驗證");
-			message.setText("您好：\n\n請點選以下網址開通：" + activationUrl);
+			message.setText("您好：\n\n請點選以下網址開通：" + activationUrl + "\n\n連結將於1小時後失效。");
 			mailSender.send(message);
 
 			// 測試用
@@ -119,8 +123,8 @@ public class UserService {
 		String userId = jwtService.parseActivationToken(token);
 
 		if (userId != null && !userId.isEmpty()) {
-			// 直接去資料庫更新該 UUID 的狀態
-			int rows = userDao.updateStatus(userId, "ACTIVE");
+			// 直接去資料庫更新該 UUID 的狀態，使用小寫 "active"
+			int rows = userDao.updateStatus(userId, "active");
 			return rows > 0;
 		}
 		return false;
@@ -137,8 +141,12 @@ public class UserService {
 	}
 
 	// 管理員停權
-	public BasicRes adminBan(String id) {
-		userDao.updateStatus(id, "banned");
+	public BasicRes adminBan(String id, Integer hours, String reason) {
+		LocalDateTime bannedUntil = null;
+		if (hours != null && hours > 0) {
+			bannedUntil = LocalDateTime.now().plusHours(hours);
+		}
+		userDao.banUser(id, bannedUntil, reason);
 		return new BasicRes(ResMessage.SUCCESS.getCode(), //
 				ResMessage.SUCCESS.getMessage());
 	}
@@ -164,18 +172,32 @@ public class UserService {
 		}
 
 		// 核心狀態檢查
-		switch (user.getStatus()) {
+		if ("banned".equals(user.getStatus())) {
+			if (user.getBannedUntil() != null && LocalDateTime.now().isAfter(user.getBannedUntil())) {
+				// 禁用期限已過 -> 自動恢復
+				user.setStatus("active");
+				user.setBannedUntil(null);
+				user.setBanReason(null);
+				userDao.save(user);
+			} else {
+				String reasonMsg = StringUtils.hasText(user.getBanReason()) ? "理由: " + user.getBanReason() : "無特定理由";
+				String untilMsg = user.getBannedUntil() != null ? "禁用至: " + user.getBannedUntil().toString() : "永久禁用";
+				return new LoginRes(ResMessage.BANNED.getCode(),
+						ResMessage.BANNED.getMessage() + " (" + untilMsg + ", " + reasonMsg + ")");
+			}
+		}
+
+		String status = user.getStatus() != null ? user.getStatus().toLowerCase() : "";
+		switch (status) {
 			case "pending_active":
 				return new LoginRes(ResMessage.PENDING_ACTIVE.getCode(), ResMessage.PENDING_ACTIVE.getMessage());
-			case "banned":
-				return new LoginRes(ResMessage.BANNED.getCode(), ResMessage.BANNED.getMessage());
 			case "self_suspended":
 				return new LoginRes(ResMessage.SELF_SUSPENDED.getCode(), ResMessage.SELF_SUSPENDED.getMessage());
 			case "active":
 				return new LoginRes(ResMessage.SUCCESS.getCode(), //
 						ResMessage.SUCCESS.getMessage(), user.getId());
 			default:
-				return new LoginRes(500, "未知狀態");
+				return new LoginRes(500, "未知狀態：" + status);
 		}
 	}
 
@@ -190,8 +212,8 @@ public class UserService {
 			return new GetUserInfoRes(ResMessage.USER_NOT_FOUND.getCode(), //
 					ResMessage.USER_NOT_FOUND.getMessage());
 		}
-		List<Integer>favoriteStores = getFavoriteStores(id);
-		
+		List<Integer> favoriteStores = getFavoriteStores(id);
+
 		return new GetUserInfoRes(ResMessage.SUCCESS.getCode(), //
 				ResMessage.SUCCESS.getMessage(), user.getId(), //
 				user.getNickname(), user.getEmail(), //
@@ -437,6 +459,16 @@ public class UserService {
 		System.out.println("清理完成，共影響了 " + updatedRows + " 筆資料。");
 	}
 
+	// 每分鐘檢查一次是否有過期的禁用
+	@Scheduled(cron = "0 * * * * ?")
+	@Transactional
+	public void autoRestoreExpiredBansJob() {
+		int count = userDao.autoRestoreBannedUsers(LocalDateTime.now());
+		if (count > 0) {
+			System.out.println("自動恢復了 " + count + " 個已到期的禁用帳戶");
+		}
+	}
+
 	/*
 	 * Redis功能區塊 暫時用不到 // 驗證並更新 Email
 	 * 
@@ -491,8 +523,7 @@ public class UserService {
 	// 信箱開通驗證
 	public boolean verifyEmail(String email) {
 		User user = userDao.getUserByEmail(email);
-		if (user != null && user.getStatus() == UserStatusEnum.PENDING_ACTIVE.getStatus()) {
-
+		if (user != null && "pending_active".equalsIgnoreCase(user.getStatus())) {
 			return true;
 		}
 		return false;
@@ -516,90 +547,102 @@ public class UserService {
 		return new BasicRes(ResMessage.SUCCESS.getCode(), "驗證信已重新發送，請檢查您的信箱。");
 	}
 
-	// 管理員恢復帳號
 	public BasicRes activeUserAdmin(String id) {
 		User user = userDao.getUserById(id);
 		if (user == null) {
 			return new BasicRes(ResMessage.USER_NOT_FOUND.getCode(), ResMessage.USER_NOT_FOUND.getMessage());
 		}
 
-		userDao.updateStatus(id, "active");
+		user.setStatus("active");
+		user.setBannedUntil(null);
+		user.setBanReason(null);
+		userDao.save(user);
 
 		return new BasicRes(ResMessage.SUCCESS.getCode(), "帳號已成功恢復為活躍狀態。");
 	}
-	
-//	private void favoriteStoresCheck(int storesId) throws Exception{
-//		if (storesSrerchDao.getStoreById(storesId)!=null) {
-//			throw new Exception("查無此店家喵");
-//		}
-//		return;
-//	}
-	
-	//更新最愛店家	
+
+	// private void favoriteStoresCheck(int storesId) throws Exception{
+	// if (storesSrerchDao.getStoreById(storesId)!=null) {
+	// throw new Exception("查無此店家喵");
+	// }
+	// return;
+	// }
+
+	// 更新最愛店家
 	@Transactional(rollbackOn = Exception.class)
 	public BasicRes updateFavoriteStores(String id, List<Integer> storesIdList) {
 		List<Integer> newList = (storesIdList == null) ? new ArrayList<>()//
-				: storesIdList.stream().distinct().collect(Collectors.toList());//去重
+				: storesIdList.stream().distinct().collect(Collectors.toList());// 去重
 		List<Integer> finalToSave;
-//		List<Integer> validStores= newlist.isEmpty() ? new ArrayList<>() : storesSrerchDao.exsitStores(newlist);
-		//	單數字>> 沒有>>新增 有>>刪除
-		if (newList.size()==1) {
-			Integer sId = newList.get(0);//sId為物件而非引索
+		// List<Integer> validStores= newlist.isEmpty() ? new ArrayList<>() :
+		// storesSrerchDao.exsitStores(newlist);
+		// 單數字>> 沒有>>新增 有>>刪除
+		if (newList.size() == 1) {
+			Integer sId = newList.get(0);// sId為物件而非引索
 			List<Integer> oldList = new ArrayList<>(getFavoriteStores(id));
 			List<Integer> validTarget = storesSrerchDao.exsitStores(Collections.singletonList(sId));
 			if (!validTarget.isEmpty()) {
-	            if (oldList.contains(sId)) {
-	            	oldList.remove(sId); // 存在則刪除（取消收藏）
-	            } else {
-	            	oldList.add(sId);    // 不存在則新增（加入收藏）
-	            }
-	        }
-	        finalToSave = oldList;
+				if (oldList.contains(sId)) {
+					oldList.remove(sId); // 存在則刪除（取消收藏）
+				} else {
+					oldList.add(sId); // 不存在則新增（加入收藏）
+				}
+			}
+			finalToSave = oldList;
 		}
-		//陣列>>直接蓋
+		// 陣列>>直接蓋
 		else {
-			finalToSave = newList.isEmpty() ? new ArrayList<>() 
-                    : storesSrerchDao.exsitStores(newList);
+			finalToSave = newList.isEmpty() ? new ArrayList<>()
+					: storesSrerchDao.exsitStores(newList);
 		}
 
-		//		Collections.sort(validStores);
+		// Collections.sort(validStores);
 		String storesString = finalToSave.stream()
-				.sorted()//排序
-                .map(String::valueOf)
-                .collect(Collectors.joining(",","[","]"));
+				.sorted()// 排序
+				.map(String::valueOf)
+				.collect(Collectors.joining(",", "[", "]"));
 		try {
 			int done = userDao.updateFavoriteStores(id, storesString);
-			if (done>0) {
-				return new BasicRes(200,"成功更新最愛店家喵");
+			if (done > 0) {
+				return new BasicRes(200, "成功更新最愛店家喵");
+			} else {
+				return new BasicRes(404, "使用者不存在喵");
 			}
-			else {
-				return new BasicRes(404,"使用者不存在喵");
-			}
-		}
-		catch(Exception e){
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("資料更新失敗喵", e);
 		}
-}
+	}
 
-	//查詢最愛店家
-	public List<Integer> getFavoriteStores(String id){
-//		List<Integer> favoriteStoresList = new ArrayList<>();
+	// 查詢最愛店家
+	public List<Integer> getFavoriteStores(String id) {
+		// List<Integer> favoriteStoresList = new ArrayList<>();
 		String listStr = "";
 		try {
-			listStr = userDao.getFavoriteStoresById(id);			
-		}
-		catch(Exception e){
+			listStr = userDao.getFavoriteStoresById(id);
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw new RuntimeException("好像沒有這個使用者喵!", e);
 		}
 		if (StringUtils.hasText(listStr) && !listStr.equals("[]")) {
 			return Arrays.stream(listStr.replace("[", "").replace("]", "").split(","))
-			.map(String::trim)		//去空格
-			.filter(s -> !s.isEmpty())  //去空字串
-			.map(Integer::parseInt)  //轉數字
-			.collect(Collectors.toCollection(ArrayList::new));	//	變成List
+					.map(String::trim) // 去空格
+					.filter(s -> !s.isEmpty()) // 去空字串
+					.map(Integer::parseInt) // 轉數字
+					.collect(Collectors.toCollection(ArrayList::new)); // 變成List
 		}
 		return new ArrayList<>();
+	}
+
+	// 管理員更換角色
+	@Transactional
+	public BasicRes adminUpdateRole(String id, String role) {
+		User user = userDao.getUserById(id);
+		if (user == null) {
+			return new BasicRes(ResMessage.USER_NOT_FOUND.getCode(), ResMessage.USER_NOT_FOUND.getMessage());
+		}
+
+		userDao.updateRole(id, role);
+		return new BasicRes(ResMessage.SUCCESS.getCode(), "角色已成功更新。");
 	}
 }

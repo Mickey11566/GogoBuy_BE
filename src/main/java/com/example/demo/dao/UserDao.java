@@ -95,13 +95,31 @@ public interface UserDao extends JpaRepository<User, String> {
 	@Query(value = "UPDATE user SET status = ?2 where id = ?1", nativeQuery = true)
 	public int updateStatus(String id, String status);
 
-	//更新最愛店家	
+	// 禁用用戶並設定期限與理由
+	@Transactional
+	@Modifying
+	@Query(value = "UPDATE user SET status = 'banned', banned_until = ?2, ban_reason = ?3 where id = ?1", nativeQuery = true)
+	public int banUser(String id, LocalDateTime bannedUntil, String banReason);
+
+	// 自動恢復已過期的禁用帳戶
+	@Transactional
+	@Modifying
+	@Query(value = "UPDATE user SET status = 'active', banned_until = NULL, ban_reason = NULL WHERE status = 'banned' AND banned_until <= ?1", nativeQuery = true)
+	public int autoRestoreBannedUsers(LocalDateTime now);
+
+	// 更新最愛店家
 	@Transactional
 	@Modifying
 	@Query(value = "update user set favorite_store = ?2 where id = ?1", nativeQuery = true)
-	public int updateFavoriteStores(@Param("userId")String userId, @Param("storesArray") String storesArray);
-	
-	//	查詢最愛店家
+	public int updateFavoriteStores(@Param("userId") String userId, @Param("storesArray") String storesArray);
+
+	// 查詢最愛店家
 	@Query(value = "Select favorite_store from user where id = ?", nativeQuery = true)
 	public String getFavoriteStoresById(@Param("id") String id);
+
+	// 更改用戶角色
+	@Transactional
+	@Modifying
+	@Query(value = "UPDATE user SET role = ?2 where id = ?1", nativeQuery = true)
+	public int updateRole(String id, String role);
 }

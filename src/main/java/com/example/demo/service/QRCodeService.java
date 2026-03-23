@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import org.springframework.beans.factory.annotation.Value;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
@@ -17,20 +18,22 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 @Service
 public class QRCodeService {
 
-	
+    @Value("${app.frontend.url:http://localhost:4200}")
+    private String frontendUrl;
 
     public BufferedImage generateGroupBuyQRCode(int eventId) throws Exception {
-    	// 基礎網址(前端網址)
-        String turnUrl = "http://localhost:4200/groupbuy-event/group-follow/";
+        String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+        String turnUrl = baseUrl + "#/groupbuy-event/group-follow/";
         // 自動組合網址
         String fullUrl = turnUrl + eventId;
-        
+
         // 呼叫原本寫好的產生邏輯
-        return generateQRCode(fullUrl); 
+        return generateQRCode(fullUrl);
     }
-	
-	/**
+
+    /**
      * 將網址字串轉換為 BufferedImage (圖片物件)
+     * 
      * @param url 目標網址
      * @return 產出的 QR Code 圖片
      * @throws WriterException 當編碼發生錯誤時
@@ -40,7 +43,7 @@ public class QRCodeService {
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
 
         // 2. 設定參數 (Hints)
-        /* 用HashMap是因為很多選填的內容，如果你什麼都不設，它會用預設值。*/
+        /* 用HashMap是因為很多選填的內容，如果你什麼都不設，它會用預設值。 */
         Map<EncodeHintType, Object> hints = new HashMap<>();
         // CHARACTER_SET : 設定編碼，防止網址有特殊字元時出錯
         hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");

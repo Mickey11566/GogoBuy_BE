@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -54,6 +55,9 @@ public class MessagesService {
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	@Value("${app.frontend.url:http://localhost:4200}")
+	private String frontendUrl;
+
 	private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
 	// 檢查通知訊息
@@ -97,12 +101,13 @@ public class MessagesService {
 			throw new IllegalArgumentException("無效的時間格式喵: " + req.getExpiredAt());
 		}
 
-//		檢查使用者id (訊息發布者，選填)
+		// 檢查使用者id (訊息發布者，選填)
 		String user = req.getUserId();
 		if (StringUtils.hasText(user)) {
 			User checkUser = userDao.getUserById(user);
 			if (checkUser == null) {
-				System.err.println("Warning: notification sender userId '" + user + "' not found in DB, skipping sender validation.");
+				System.err.println("Warning: notification sender userId '" + user
+						+ "' not found in DB, skipping sender validation.");
 				// 不拋出例外，允許通知繼續發送 (sender 不一定需要存在於 user 表)
 			}
 		}
@@ -180,14 +185,16 @@ public class MessagesService {
 			pushMessage = req.getContent();
 		}
 
-		System.out.println("Creating notification: " + req.getTitle() + " for " + UserNotificationVoList.size() + " recipients.");
+		System.out.println(
+				"Creating notification: " + req.getTitle() + " for " + UserNotificationVoList.size() + " recipients.");
 		for (UserNotificationVo vo : UserNotificationVoList) {
-			System.out.println("Notifying user: " + vo.getUserId() + (StringUtils.hasText(vo.getEmail()) ? " (with email)" : ""));
+			System.out.println(
+					"Notifying user: " + vo.getUserId() + (StringUtils.hasText(vo.getEmail()) ? " (with email)" : ""));
 			userNotifDao.createUserNotifi(vo.getUserId(), nofitId);
-			
+
 			// 1. 站內即時通知 (SSE)
 			notificationService.sendNotification(vo.getUserId(), pushMessage);
-			
+
 			// 2. Email 通知
 			if (StringUtils.hasText(vo.getEmail())) {
 				sendPickupEmail(vo.getEmail(), req.getTitle(), req.getContent());
@@ -204,7 +211,8 @@ public class MessagesService {
 			message.setFrom("GogobuyAdmin@gmail.com");
 			message.setTo(email);
 			message.setSubject("[GoGoBuy] " + title);
-            message.setText("您好：\n\n" + content + "\n\n詳情請點擊 http://localhost:4200/gogobuy/home 查看 GoGoBuy 官網 。");
+			String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+			message.setText("您好：\n\n" + content + "\n\n詳情請點擊 " + baseUrl + "#/gogobuy/home 查看 GoGoBuy 官網 。");
 			mailSender.send(message);
 		} catch (Exception e) {
 			// 郵件發送失敗不應中斷整個流程，僅紀錄錯誤
@@ -218,7 +226,7 @@ public class MessagesService {
 		checkNotifiMes(req);
 		checkUserNotif(req.getUserNotificationVoList());
 		NotifiMes mes = notifiMesDao.findById(id).orElseThrow(() -> //
-		new Exception("找不到該筆訊息 ID: " + id ));
+		new Exception("找不到該筆訊息 ID: " + id));
 
 		mes.setCategory(req.getCategory());
 		mes.setTitle(req.getTitle());
@@ -257,13 +265,13 @@ public class MessagesService {
 
 	// 刪除通知
 	public BasicRes delete(int notifId) throws Exception {
-//		檢查
+		// 檢查
 		NotifiMes mes = notifiMesDao.findById(notifId)
 				.orElseThrow(() -> new Exception("找不到該筆訊息 ID: " + notifId + "，刪除失敗"));
 		String title = mes.getTitle();
-//		砍子表
+		// 砍子表
 		userNotifDao.deleteByNotifId(notifId);
-//		砍主表
+		// 砍主表
 		notifiMesDao.deleteById(notifId);
 		return new BasicRes(ResMessage.SUCCESS.getCode(), "訊息標題:[" + title + "]已經被砍光了");
 	}

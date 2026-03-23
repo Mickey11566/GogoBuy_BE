@@ -18,7 +18,7 @@ import com.example.demo.service.SalesStatsService;
 @RequestMapping("/gogobuy/salesStats")
 public class SalesStatsController {
 
-	@Autowired
+    @Autowired
     private SalesStatsService salesStatsService;
 
     /**
@@ -29,25 +29,24 @@ public class SalesStatsController {
         try {
             // 呼叫 Service 執行 DAILY 與 ALL 的更新
             salesStatsService.addSalesVolume(
-                req.getStoreId(), 
-                req.getMenuId(), 
-                req.getQuantity()
-            );
+                    req.getStoreId(),
+                    req.getMenuId(),
+                    req.getQuantity());
             return "銷量累計成功喵！店鋪:" + req.getStoreId() + ", 品項:" + req.getMenuId();
         } catch (Exception e) {
             return "累計失敗喵... 錯誤: " + e.getMessage();
         }
     }
-    
+
     @GetMapping("/top10/{storeId}")
     public SalesStatsRes getTop10ByStore(
-            @PathVariable("storeId") Integer storeId, 
+            @PathVariable("storeId") Integer storeId,
             @RequestParam(value = "type", required = false) SalesStatsType type) {
-        
+
         // type預設為 ALL
         return salesStatsService.getTop10SalesBystore(storeId, type);
     }
-    
+
     @GetMapping("/Top10")
     public SalesStatsRes getTop10(@RequestParam(value = "type", required = false) SalesStatsType type) {
         return salesStatsService.getTop10(type);

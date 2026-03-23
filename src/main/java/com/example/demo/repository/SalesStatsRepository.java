@@ -84,14 +84,15 @@ public interface SalesStatsRepository extends JpaRepository<SalesStats, Long> {
            "    m.image AS productImage, " +
            "  	 s.store_id AS storeId, " +
            "    st.name AS storeName, " + // 從 stores 表拿名字
-           "    s.sales_volume AS salesVolume, " +
+           "    SUM(s.sales_volume) AS salesVolume, " +
            "    s.stats_type AS statsType " +
            "FROM sales_stats s " +
            "INNER JOIN menu m ON s.menu_id = m.id " +
            "INNER JOIN stores st ON s.store_id = st.id " + // 串接店家資訊
            "WHERE s.stats_type = :type " +
            "AND (:date IS NULL OR s.stats_date = :date) " +
-           "ORDER BY s.sales_volume DESC " +
+           "GROUP BY s.menu_id, s.store_id, m.name, m.image, s.stats_type " + // 依照商品 ID 分組
+           "ORDER BY salesVolume DESC " +
            "LIMIT 10", nativeQuery = true)
     List<SalesLeaderboardProjection> findGlobalTop10(//
     		@Param("type") String type,//

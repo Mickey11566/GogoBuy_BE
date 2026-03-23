@@ -1,0 +1,23 @@
+
+# 排除本地編譯產物
+build/
+out/
+target/
+*.jar
+
+# 排除 IDE 設定與快取
+.gradle/
+.idea/
+.vscode/
+*.iml
+
+# 排除 Git 紀錄
+.git
+.gitignore
+
+# 排除本地測試 Log
+*.log
+
+# 排除作業系統暫存
+.DS_Store
+Thumbs.db

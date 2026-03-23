@@ -17,12 +17,14 @@ public class StoresRes extends BasicRes {
 
 	// 新功能專用 (用於附近店家的 Projection)
 	private List<?> data;
-	
-	//營業中篩選用	
+
+	private List<MenuVo> menuVoList;
+
+	// 營業中篩選用
 	private List<Map<String, Object>> storeOperatingList;
 
 	private List<StoreOperatingHoursVo> operatingHoursVoList;
-	private List<MenuVo> menuVoList;
+//	private List<MenuVo> menuVoList;
 	private List<MenuCategoriesVo> menuCategoriesVoList;
 	private List<ProductOptionGroupsVo> productOptionGroupsVoList;
 	private List<FeeDescriptionVo> feeDescriptionVoList;
@@ -52,16 +54,13 @@ public class StoresRes extends BasicRes {
 
 	// 供詳細資料 getStoreById 使用的完整建構子
 	public StoresRes(int code, String message, List<Stores> storeList, List<StoreOperatingHoursVo> operatingHoursVoList,
-			List<MenuVo> menuVoList, List<MenuCategoriesVo> menuCategoriesVoList,
-			List<ProductOptionGroupsVo> productOptionGroupsVoList) {
+			List<MenuCategoriesVo> menuCategoriesVoList, List<ProductOptionGroupsVo> productOptionGroupsVoList) {
 		super(code, message);
 		this.storeList = storeList;
 		this.operatingHoursVoList = operatingHoursVoList;
-		this.menuVoList = menuVoList;
 		this.menuCategoriesVoList = menuCategoriesVoList;
 		this.productOptionGroupsVoList = productOptionGroupsVoList;
 	}
-
 
 	public List<Stores> getStoreList() {
 		return storeList;
@@ -85,14 +84,6 @@ public class StoresRes extends BasicRes {
 
 	public void setOperatingHoursVoList(List<StoreOperatingHoursVo> list) {
 		this.operatingHoursVoList = list;
-	}
-
-	public List<MenuVo> getMenuVoList() {
-		return menuVoList;
-	}
-
-	public void setMenuVoList(List<MenuVo> list) {
-		this.menuVoList = list;
 	}
 
 	public List<MenuCategoriesVo> getMenuCategoriesVoList() {
@@ -126,6 +117,13 @@ public class StoresRes extends BasicRes {
 	public void setStoreOperatingList(List<Map<String, Object>> storeOperatingList) {
 		this.storeOperatingList = storeOperatingList;
 	}
-	
-	
+
+	public List<MenuVo> getMenuVoList() {
+		return menuVoList;
+	}
+
+	public void setMenuVoList(List<MenuVo> menuVoList) {
+		this.menuVoList = menuVoList;
+	}
+
 }

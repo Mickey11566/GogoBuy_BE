@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -33,10 +34,15 @@ public class SecurityConfig {
 	@Autowired
 	private UserDao userDao;
 
+	@Value("${app.frontend.url}")
+	private String frontendUrl;
+
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:4200")); // Angular 端口
+		config.setAllowedOriginPatterns(
+				List.of("http://localhost:4200", "http://127.0.0.1:4200", "https://*.ts.net:*", "https://*.ts.net",
+						"https://gogobuy.netlify.app/", frontendUrl));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true); // 允許攜帶 Cookie (JSESSIONID)
@@ -68,8 +74,7 @@ public class SecurityConfig {
 
 					// 登入成功後的處理: 設定 Session 並跳轉
 					oauth2.successHandler((request, response, authentication) -> {
-						OAuth2User oauthUser = (OAuth2User) authentication
-								.getPrincipal();
+						OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
 						String email = oauthUser.getAttribute("email");
 						User user = userDao.getUserByEmail(email);
 
@@ -79,7 +84,10 @@ public class SecurityConfig {
 							request.getSession().setAttribute("account", email);
 						}
 
-						response.sendRedirect("http://localhost:4200/auth-callback");
+						// 統一使用配置的前端網址進行跳轉，避免受 Referer 影響導向錯誤網域
+						String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+						String finalRedirectUrl = baseUrl + "#/auth-callback";
+						response.sendRedirect(finalRedirectUrl);
 					});
 
 					// 登入失敗處理：將錯誤訊息編碼後傳回前端
@@ -88,8 +96,7 @@ public class SecurityConfig {
 
 						// 嘗試從 OAuth2AuthenticationException 取得詳細描述
 						if (exception instanceof OAuth2AuthenticationException) {
-							OAuth2Error error = ((OAuth2AuthenticationException) exception)
-									.getError();
+							OAuth2Error error = ((OAuth2AuthenticationException) exception).getError();
 							if (error != null && error.getDescription() != null) {
 								errorMessage = error.getDescription();
 							}
@@ -101,21 +108,26 @@ public class SecurityConfig {
 						System.out.println("OAuth2 Login Failure: " + errorMessage); // Debug logging
 
 						// 特殊處理：如果是「新帳號建立」的例外，導向到驗證提示而非錯誤
-						if (errorMessage.contains("Account created")) {
-							String encodedMsg = URLEncoder.encode("註冊成功，已發送驗證信至您的信箱", StandardCharsets.UTF_8);
+						String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+						if (errorMessage.contains("Account created")
+								|| errorMessage.contains("Account not activated")) {
+							String encodedMsg = URLEncoder.encode("註冊成功，已發送驗證信至您的信箱，請開通後再登入", StandardCharsets.UTF_8);
 							response.sendRedirect(
-									"http://localhost:4200/gogobuy/login?verificationSent=true&message=" + encodedMsg);
+									baseUrl + "#/gogobuy/login?verificationSent=true&message=" + encodedMsg);
 						} else {
 							String encodedMsg = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
-							response.sendRedirect("http://localhost:4200/gogobuy/login?errorMsg=" + encodedMsg);
+							response.sendRedirect(baseUrl + "#/gogobuy/login?errorMsg=" + encodedMsg);
 						}
 					});
 				})
 
 				// 3. 登出區塊
-				.logout(logout -> {
+				.logout(logout ->
+
+				{
 					// 登出成功後同樣跳回前端首頁
-					logout.logoutSuccessUrl("http://localhost:4200");
+					String baseUrl = frontendUrl.endsWith("/") ? frontendUrl : frontendUrl + "/";
+					logout.logoutSuccessUrl(baseUrl + "#/gogobuy/home");
 					// 順便清除 Session 和 Cookie，確保登出乾淨
 					// JSESSIONID : Java Web 容器在使用者第一次訪問時自動產生的 Cookie
 					logout.invalidateHttpSession(true);
